@@ -1,1 +1,1 @@
-export * from "./gen/module";
+export * from "./gen/example";
