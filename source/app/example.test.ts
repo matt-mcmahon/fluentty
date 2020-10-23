@@ -1,8 +1,7 @@
 import { describe } from "../lib/remote/describe.ts";
-import { example } from "./module.ts";
+import { example } from "./example.ts";
 
-describe("passing-test", ({ assert }) => {
-  // example is a function
+describe("typeof example", ({ assert }) => {
   assert({
     actual: typeof example,
     expected: "function",
@@ -11,10 +10,10 @@ describe("passing-test", ({ assert }) => {
   });
 });
 
-describe("failing-test", ({ assert }) => {
-  // but example() doesn't return anything
+describe("function invocation", ({ assert }) => {
   assert({
     actual: example(),
-    expected: "it works",
+    given: "Invocation of example()",
+    expected: "It works!",
   });
 });
