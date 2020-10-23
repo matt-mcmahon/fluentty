@@ -1,0 +1,32 @@
+{
+	"name": "@mwm/create-deno-first",
+	"version": "0.0.0",
+	"author": "Matt McMahon <contact@matt-mcmahon.com> (https://matt-mcmahon.com/)",
+	"description": "**Deno-First** scaffolds a new [Deno][deno] [TypeScript][ts] project in a way that allows you to easily port your project to other platforms, like Node. It uses [make][make] to manage your source code, and is configured with the following `make <targets>`:",
+	"homepage": "https://github.com/matt-mcmahon/create-deno-first#readme",
+	"license": "MIT",
+	"main": "./dist/index.js",
+	"type": "commonjs",
+	"types": "./dist/index.d.ts",
+	"bugs": {
+		"url": "https://github.com/matt-mcmahon/create-deno-first/issues"
+	},
+	"devDependencies": {
+		"@types/node": "^14.11.4",
+		"typescript": "^4.0.3"
+	},
+	"keywords": [],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/matt-mcmahon/create-deno-first.git",
+		"directory": "platform/node"
+	},
+	"scripts": {
+		"build": "tsc",
+		"build-development": "tsc",
+		"build-production": "tsc -p tsconfig.production.json",
+		"prepack": "cat .gitignore .npmignore-additions > .npmignore",
+		"test": "tap ./test-build/**/*.test.js"
+	},
+	"private": true
+}

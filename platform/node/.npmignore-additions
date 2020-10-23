@@ -1,0 +1,15 @@
+
+# Additional files ignored by NPM publish, added to list in .gitignore
+
+.deno
+.eslintignore
+.eslintrc.js
+.gitattributes
+.npmignore
+.npmignore-additions
+.prettierignore
+.prettierrc
+.vscode
+Makefile
+tsconfig.json
+tsconfig.production.json
