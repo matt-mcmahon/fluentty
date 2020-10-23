@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "connection": "keep-alive",
+    "x-frame-options": "deny",
+    "x-cache": "MISS, MISS",
+    "accept-ranges": "bytes",
+    "x-timer": "S1603414164.217040,VS0,VE76",
+    "vary": "Authorization,Accept-Encoding",
+    "via": "1.1 varnish (Varnish/6.0),1.1 varnish",
+    "content-type": "text/plain; charset=utf-8",
+    "x-fastly-request-id": "b762eb6233045d74686913d160290319cdab6fad",
+    "x-cache-hits": "0, 0",
+    "access-control-allow-origin": "*",
+    "source-age": "0",
+    "etag": "W/\"83e838773f3538f15935074fe9008969fc37e5c3ec87874e5e88846ccd4d82c0\"",
+    "expires": "Fri, 23 Oct 2020 00:54:24 GMT",
+    "x-xss-protection": "1; mode=block",
+    "date": "Fri, 23 Oct 2020 00:49:24 GMT",
+    "x-github-request-id": "F9A2:0AB7:21235E:26AE8D:5F92221D",
+    "strict-transport-security": "max-age=31536000",
+    "cache-control": "max-age=300",
+    "x-content-type-options": "nosniff",
+    "x-served-by": "cache-dca17762-DCA"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/describe/master/source/app/utils.ts"
+}
