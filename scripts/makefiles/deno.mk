@@ -22,10 +22,10 @@ USE_UNSTABLE           ?=
 #
 # Do NOT set these values to nothing.
 #
-DENO_BUNDLE_FILE       ?= ./bundle.js
-DENO_DEPENDENCIES_FILE ?= ./source/deps.ts
-DENO_MAIN              ?= ./source/mod.ts
-DENO_SOURCE_DIR        ?= ./source
+DENO_BUNDLE_FILE       ?= bundle.js
+DENO_DEPENDENCIES_FILE ?= dependencies.ts
+DENO_MAIN              ?= module.ts
+DENO_SOURCE_DIR        ?= source
 DENO_APP_DIR           ?= $(DENO_SOURCE_DIR)/app
 DENO_LIB_DIR           ?= $(DENO_SOURCE_DIR)/lib
 
@@ -56,10 +56,10 @@ endif
 all: install lint build test-all
 
 $(PLATFORMS):
-	@$(MAKE) -C $@ $(TARGET)
+	$(MAKE) -C $@ $(TARGET)
 
 $(INTEGRATIONS):
-	@$(MAKE) -C $@ $(TARGET)
+	$(MAKE) -C $@ $(TARGET)
 
 $(LOCK_FILE):
 	@echo "File $(LOCK_FILE) does not exist."
@@ -90,8 +90,8 @@ $(GEN_DIR): $(SOURCE_FILES)
 		sed -i -E "s/(from \"\..+)\.ts(\";?)/\1\2/g" {} +
 
 build: header(build) $(DENO_BUNDLE_FILE)
-	@$(MAKE) TARGET=$@ do-platform-action
-	@$(MAKE) TARGET=$@ do-integration-action
+	$(MAKE) TARGET=$@ do-platform-action
+	$(MAKE) TARGET=$@ do-integration-action
 
 cache:
 	deno cache \
@@ -107,8 +107,8 @@ cache:
 		$(DENO_DEPENDENCIES_FILE)
 
 clean: header(clean)
-	@$(MAKE) TARGET=$@ do-platform-action
-	@$(MAKE) TARGET=$@ do-integration-action
+	$(MAKE) TARGET=$@ do-platform-action
+	$(MAKE) TARGET=$@ do-integration-action
 
 configure:
 	./configure
@@ -145,8 +145,8 @@ header(test):
 	@echo
 
 install: header(install) $(LOCK_FILE)
-	@$(MAKE) TARGET=$@ do-platform-action
-	@$(MAKE) TARGET=$@ do-integration-action
+	$(MAKE) TARGET=$@ do-platform-action
+	$(MAKE) TARGET=$@ do-integration-action
 
 lint:
 	deno fmt --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)
@@ -168,8 +168,8 @@ test: header(test)
 		$(DENO_SOURCE_DIR)
 
 test-all: header(test) test
-	@$(MAKE) TARGET=test do-platform-action
-	@$(MAKE) TARGET=test do-integration-action
+	$(MAKE) TARGET=test do-platform-action
+	$(MAKE) TARGET=test do-integration-action
 
 test-quiet: header(test)
 	deno test --unstable --failfast --quiet \
