@@ -54,8 +54,8 @@ const verifyVersion = (json: JSON) =>
 export const configPackageJSON = async (set: Set) => {
   const defaultJSON = {
     type: "commonjs",
-    main: "./dist/index.js",
-    types: "./dist/index.d.ts",
+    main: "./build/index.js",
+    types: "./build/index.d.ts",
     scripts: {
       build: "tsc",
       "build-development": "tsc",

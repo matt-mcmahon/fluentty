@@ -5,9 +5,9 @@
 	"description": "**Deno-First** scaffolds a new [Deno][deno] [TypeScript][ts] project in a way that allows you to easily port your project to other platforms, like Node. It uses [make][make] to manage your source code, and is configured with the following `make <targets>`:",
 	"homepage": "https://github.com/matt-mcmahon/create-deno-first#readme",
 	"license": "MIT",
-	"main": "./dist/index.js",
+	"main": "./build/index.js",
 	"type": "commonjs",
-	"types": "./dist/index.d.ts",
+	"types": "./build/index.d.ts",
 	"bugs": {
 		"url": "https://github.com/matt-mcmahon/create-deno-first/issues"
 	},
