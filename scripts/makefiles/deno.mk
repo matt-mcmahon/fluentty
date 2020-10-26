@@ -39,6 +39,7 @@ NPM_UNLINK             ?= $(NPM) unlink
 
 SOURCE_FILES           := $(shell find "$(DENO_SOURCE_DIR)" -type f -name "*.ts")
 LINT_FILES             := $(shell find "$(DENO_SOURCE_DIR)" -type f -name "*.ts" -not -name "*.test.ts")
+REMOTE_DEPENDENCIES    := $(shell find $(shell find "$(DENO_SOURCE_DIR)" -type d -name "remote") -type f -name "*.ts")
 
 PLATFORMS              := $(shell find ./platform/         -maxdepth 1 -mindepth 1 -type d)
 INTEGRATIONS           := $(shell find ./integration-test/ -maxdepth 1 -mindepth 1 -type d)
@@ -66,10 +67,11 @@ $(INTEGRATIONS):
 endif
 
 ifneq ($(LOCK_FILE),)
-$(LOCK_FILE):
-	@echo "File $(LOCK_FILE) does not exist."
-	read -p "Press [Enter] to update your lock-file and dependencies, or [Ctrl]+[C] to cancel:" cancel
-	deno cache \
+$(LOCK_FILE): $(REMOTE_DEPENDENCIES)
+	@read -p \
+		"Dependencies may changed. Press [Enter] to update $(LOCK_FILE), or [Ctrl]+[C] to cancel:" \
+		cancel
+	deno cache --reload \
 		$(RUN_PERMISSIONS) \
 		$(LOCK_OPTIONS_WRITE) \
 		$(IMPORT_MAP_OPTIONS) \
@@ -102,19 +104,6 @@ endif
 build: header(build) $(DENO_BUNDLE_FILE)
 	$(MAKE) TARGET=$@ do-platform-action
 	$(MAKE) TARGET=$@ do-integration-action
-
-cache:
-	deno cache \
-		$(RUN_PERMISSIONS) \
-		$(LOCK_OPTIONS) \
-		$(IMPORT_MAP_OPTIONS) \
-		$(USE_UNSTABLE) \
-		$(DENO_DEPENDENCIES_FILE)
-	unset DENO_DIR && deno cache \
-		$(RUN_PERMISSIONS) \
-		$(IMPORT_MAP_OPTIONS) \
-		$(USE_UNSTABLE) \
-		$(DENO_DEPENDENCIES_FILE)
 
 clean: header(clean)
 	$(MAKE) TARGET=$@ do-platform-action
@@ -169,7 +158,7 @@ lint-quiet:
 run:
 	deno run $(RUN_PERMISSIONS) $(DENO_MAIN)
 
-test: header(test)
+test: header(test) $(LOCK_FILE)
 	deno test --unstable --coverage \
 		$(TEST_PERMISSIONS) \
 		$(LOCK_OPTIONS) \
@@ -181,7 +170,7 @@ test-all: header(test) test
 	$(MAKE) TARGET=test do-platform-action
 	$(MAKE) TARGET=test do-integration-action
 
-test-quiet: header(test)
+test-quiet: header(test) $(LOCK_FILE)
 	deno test --unstable --failfast --quiet \
 		$(TEST_PERMISSIONS) \
 		$(LOCK_OPTIONS) \
@@ -191,25 +180,6 @@ test-quiet: header(test)
 
 test-watch: header(test)
 	while inotifywait -e close_write $(DENO_APP_DIR) ; do make test;	done
-
-upgrade:
-ifneq ($(LOCK_FILE),)
-	@read -p \
-		"[Enter] to update the lock-file and dependencies, [Ctrl]+[C] to cancel:" \
-		cancel
-	deno cache --reload \
-		$(RUN_PERMISSIONS) \
-		$(LOCK_OPTIONS_WRITE) \
-		$(IMPORT_MAP_OPTIONS) \
-		$(USE_UNSTABLE) \
-		$(DENO_DEPENDENCIES_FILE)
-	unset DENO_DIR && deno cache --reload \
-		$(RUN_PERMISSIONS) \
-		$(IMPORT_MAP_OPTIONS) \
-		$(USE_UNSTABLE) \
-		$(DENO_DEPENDENCIES_FILE)
-
-endif
 
 # Yes, most everything is .PHONY, I don't care 😏
 .PHONY: \
