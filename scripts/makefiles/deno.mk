@@ -9,6 +9,7 @@ export
 #
 # DENO_DIR=
 #
+DENO_BUNDLE_FILE       ?=
 DENO_DIR               ?= .deno
 IMPORT_MAP             ?=
 LOCK_FILE              ?= lock_file.json
@@ -22,7 +23,6 @@ USE_UNSTABLE           ?=
 #
 # Do NOT set these values to nothing.
 #
-DENO_BUNDLE_FILE       ?= bundle.js
 DENO_DEPENDENCIES_FILE ?= dependencies.ts
 DENO_MAIN              ?= module.ts
 DENO_SOURCE_DIR        ?= source
@@ -55,12 +55,17 @@ endif
 
 all: install lint build test-all
 
+ifneq ($(PLATFORMS),)
 $(PLATFORMS):
 	$(MAKE) -C $@ $(TARGET)
+endif
 
+ifneq ($(INTEGRATIONS),)
 $(INTEGRATIONS):
 	$(MAKE) -C $@ $(TARGET)
+endif
 
+ifneq ($(LOCK_FILE),)
 $(LOCK_FILE):
 	@echo "File $(LOCK_FILE) does not exist."
 	read -p "Press [Enter] to update your lock-file and dependencies, or [Ctrl]+[C] to cancel:" cancel
@@ -70,7 +75,9 @@ $(LOCK_FILE):
 		$(IMPORT_MAP_OPTIONS) \
 		$(USE_UNSTABLE) \
 		$(DENO_DEPENDENCIES_FILE)
+endif
 
+ifneq ($(DENO_BUNDLE_FILE),)
 $(DENO_BUNDLE_FILE): $(LINT_FILES)
 	@echo "// deno-fmt-ignore-file"   > $(DENO_BUNDLE_FILE)
 	@echo "// deno-lint-ignore-file" >> $(DENO_BUNDLE_FILE)
@@ -80,7 +87,9 @@ $(DENO_BUNDLE_FILE): $(LINT_FILES)
 		$(USE_UNSTABLE) \
 		$(DENO_MAIN) \
 		>> $(DENO_BUNDLE_FILE)
+endif
 
+ifneq ($(GEN_DIR),)
 $(GEN_DIR): $(SOURCE_FILES)
 	mkdir -p $@
 	rsync -am --include="*.ts" --delete-during \
@@ -88,6 +97,7 @@ $(GEN_DIR): $(SOURCE_FILES)
 		$@/
 	find $@ -type f -name "*.ts" -exec \
 		sed -i -E "s/(from \"\..+)\.ts(\";?)/\1\2/g" {} +
+endif
 
 build: header(build) $(DENO_BUNDLE_FILE)
 	$(MAKE) TARGET=$@ do-platform-action
@@ -125,22 +135,22 @@ format:
 	deno fmt $(DENO_SOURCE_DIR) $(DENO_LIB_DIR)
 
 header(build):
-	@echo 
+	@echo
 	@echo Building...
 	@echo
 
 header(clean):
-	@echo 
+	@echo
 	@echo Cleaning...
 	@echo
 
 header(install):
-	@echo 
+	@echo
 	@echo Installing...
 	@echo
 
 header(test):
-	@echo 
+	@echo
 	@echo Running Tests...
 	@echo
 
@@ -215,5 +225,4 @@ endif
 	run \
 	test test-quiet test-watch \
 	upgrade \
-	$(PLATFORMS) \
-	$(INTEGRATIONS)
+	$(PLATFORMS) $(INTEGRATIONS)
