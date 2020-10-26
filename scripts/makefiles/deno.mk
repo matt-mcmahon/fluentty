@@ -96,7 +96,7 @@ $(GEN_DIR): $(SOURCE_FILES)
 		$(DENO_APP_DIR)/ \
 		$@/
 	find $@ -type f -name "*.ts" -exec \
-		sed -i -E "s/(from \"\..+)\.ts(\";?)/\1\2/g" {} +
+		sed -i -E "s/(from \"\..+)(\.d.ts)|(\.ts)(\";?)/\1\4/g" {} +
 endif
 
 build: header(build) $(DENO_BUNDLE_FILE)
