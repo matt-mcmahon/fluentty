@@ -1,3 +1,3 @@
-import { configPackageJSON } from "./package.ts";
+import { configPackageJSON } from "./configure_package.ts";
 
 configPackageJSON("package.json", "platform/node/package.json");

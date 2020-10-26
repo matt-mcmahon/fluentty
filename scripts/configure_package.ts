@@ -8,9 +8,13 @@ import {
 } from "./prompt.ts";
 import { exists } from "./remote/fs.ts";
 import { join } from "./remote/path.ts";
+import type { Set } from "./configure.ts";
 
 // deno-lint-ignore no-explicit-any
 type JSON = any;
+
+const source = "package.json";
+const target = "platform/node/package.json";
 
 const readFile = (filePath: string) => Deno.readTextFile(filePath);
 const stringifyJSON = async (data: JSON) => JSON.stringify(data, null, "\t");
@@ -47,7 +51,7 @@ const verifyVersion = (json: JSON) =>
     .then(prompt)
     .then((version) => ({ ...json, ...{ version } }));
 
-export const configPackageJSON = async (source: string, target: string) => {
+export const configPackageJSON = async (set: Set) => {
   const defaultJSON = {
     type: "commonjs",
     main: "./dist/index.js",
@@ -88,7 +92,7 @@ export const configPackageJSON = async (source: string, target: string) => {
     .then(retry())
     .then(prompt).then((strategy) =>
       strategy === "overwrite"
-        ? Object.assign({}, newJSON, existingJSON, defaultJSON)
+        ? Object.assign({}, existingJSON, newJSON, defaultJSON)
         : strategy === "merge"
         ? Object.assign(
           {},
@@ -106,5 +110,5 @@ export const configPackageJSON = async (source: string, target: string) => {
   return stringifyJSON(json)
     .then((json) => forceWriteTextFile(target, json))
     .then(() => Deno.remove(source))
-    .then(() => <string> json.name);
+    .then(() => set("NPM_PACKAGE_NAME")(json.name));
 };
