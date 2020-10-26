@@ -1,25 +1,19 @@
-PRODUCTION_FILES  := $(shell find "source/gen/" -type f -name "*.ts" -not -name "*.test.ts")
-DEVELOPMENT_FILES := $(shell find "source/gen/" -type f -name "*.ts")
+DEVELOPMENT_FILES := $(shell find "$(PWD)/$(DENO_SOURCE_DIR)" -type f -name "*.ts")
+GEN_DIR           := $(CURDIR)/source/gen
 
-GEN_DIR := $(CURDIR)/source/gen
+all: install test build
 
-all: install test dist
+$(GEN_DIR): $(DEVELOPMENT_FILES)
+	$(MAKE) GEN_DIR=$(GEN_DIR) -C $(PWD) $(GEN_DIR)
 
-build: dist
-
-$(DEVELOPMENT_FILES): source/gen
-
-source/gen: $(DENO_SOURCE_DIR)
-	$(MAKE) GEN_DIR=$(GEN_DIR) -C ../../ $(GEN_DIR)
+build: $(GEN_DIR)
+	rm -rf build
+	$(NPM_RUN) build-production
+	$(NPM_LINK)
 
 clean:
 	-$(NPM_UNLINK)
-	rm -rf node_modules test-build .nyc_output dist source/gen .npmignore
-
-dist: source/gen $(PRODUCTION_FILES)
-	rm -rf dist
-	$(NPM_RUN) build-production
-	$(NPM_LINK)
+	rm -rf .npmignore .nyc_output build node_modules $(GEN_DIR) test-build
 
 install:
 	$(NPM_INSTALL)
@@ -27,8 +21,8 @@ install:
 test: test-build
 	$(NPM_RUN) test
 
-test-build: $(DEVELOPMENT_FILES)
+test-build: $(GEN_DIR)
 	rm -rf test-build
 	$(NPM_RUN) build-development
 
-.PHONY: all build clean install test source/gen
+.PHONY: all clean install test
