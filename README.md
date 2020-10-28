@@ -6,27 +6,25 @@ It uses [make][make] to manage your source code, and is configured with the foll
 | Target                 | Alias | Description                                                                                                                                                                                               |
 | ---------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `all`                  |       | Runs the `install`, `build` and `test-all` targets.                                                                                                                                                       |
-| `build`                |       | Creates a Deno `bundle`, and then copies and transforms the source-code for other `target/*` platforms.                                                                                                   |
-| `bundle.js`            |       | Creates a Deno-only, single-file bundle of the project appropriate for the cloud. You can rename `bundle.js` by setting `DENO_BUNDLE_FILE` in `.env`.                                                     |
-| `cache`                |       | Caches the project's dependencies in `DENO_DIR` and in your global Deno cache (so that IDEs like VSCode know what's in them).                                                                             |
+| `build`                |       | Creates a Deno `bundle`, and then copies and transforms the source-code for other `platform/*` platforms.                                                                                                 |
+| `bundle.js`            |       | Creates a Deno-only, single-file bundle of the project appropriate for the cloud. You can rename `bundle.js` by setting `DENO_BUNDLE_FILE` in `.env`, or set it to nothing to disable bundling.           |
 | `clean`                |       | Safely deletes build artifacts and common un-tracked files. Run before `build` to start with a clean slate.                                                                                               |
 | `configure`            |       | Runs the `./configure` shell script. This script creates a `.env` file for you, and sets other configuration options.                                                                                     |
-| `deno`                 |       | Runs `bundle` then `test-deno`.                                                                                                                                                                           |
-| `do-build-targets`     |       | Run `make` on all `target/<platform>` folders. See: <https://github.com/matt-mcmahon/describe/issues/4>                                                                                                   |
+| `do-build-targets`     |       | Run `make` on all `platform/<platform>` folders. See: <https://github.com/matt-mcmahon/describe/issues/4>                                                                                                 |
 | `do-integration-tests` |       | Run `make` on all `integration-tests/<test>` folders.                                                                                                                                                     |
 | `format`               | `fmt` | Formats the project source code using `deno fmt`.                                                                                                                                                         |
-| `install`              |       | Creates `lock-file.json` if one doesn't already exist.                                                                                                                                                    |
+| `install`              |       | Creates `lock_file.json` if one doesn't already exist or updates it, if necessary, and then runs install target on every **integration-test** and **platform**.                                           |
 | `integration-tests/*`  |       | Run an integration-test.                                                                                                                                                                                  |
 | `lint`                 |       | Checks the project format using `deno fmt --check`, then runs Deno's experimental linter, `deno lint`. We don't lint test files, `*.test.ts`. We assume any lint errors in your Test code are deliberate. |
 | `lint-quiet`           |       | Like `lint`, but less verbose.                                                                                                                                                                            |
-| `lock-file.json`       |       | Create `lock-file.json` for the project. You can rename `lock-file.json` by setting `LOCK_FILE` in `.env`.                                                                                                |  |
+| `lock_file.json`       |       | Create `lock_file.json` for the project. You can rename `lock_file.json` by setting `LOCK_FILE` in `.env`.                                                                                                |  |
+| `platform/*`           |       | Clean, build, and test a platform.                                                                                                                                                                        |
 | `run`                  |       | Executes the project on the command line using `deno run`.                                                                                                                                                |
-| `target/*`             |       | Clean, build, and test a target platform.                                                                                                                                                                 |
 | `test`                 |       | Runs tests for Deno version of the project only, using `deno test`.                                                                                                                                       |
-| `test-all`             |       | Runs all tests for the project, including `integration-tests/*` and `target/*` tests.                                                                                                                     |
+| `test-all`             |       | Runs all tests for the project, including `integration-tests/*` and `platform/*` tests.                                                                                                                   |
 | `test-quiet`           |       | Like `test`, but less verbose.                                                                                                                                                                            |
 | `test-watch`           |       | Watches the `./source` folder for file-changes and runs `make test` after each. [`inotify`][inotify] must be installed.                                                                                   |
-| `upgrade`              |       | `--reload` the project's dependency cache and update the lock-file. This is only necessary if you change your project's dependencies!                                                                     |
+| `upgrade`              |       | Forces make to reload your project's dependency cache, and update your `lock_file.json`, even if make isn't detecting changes to your dependencies.                                                       |
 
 ## Conventions
 
@@ -42,11 +40,13 @@ That path should either be absolute or relative to the grandparent Makefile &mda
 
 All platform-dependent code is located in `lib` or, occasionally, `test` sibling folders.
 The `./source/lib` folder has Deno-dependent source code in it.
-Each platform we target has its own `lib` folder written specifically for that platform in `platform/[name]/source/lib`.
+Each platform we support needs its own `lib` folder written specifically for that platform in `platform/[name]/source/lib`.
 
 ## It's not a bundle
 
-`deno bundle` was my first thought at a proof-of-concept demonstration, but it's not a good fit for this use. The `bundle` command generates code that's targeted at **Deno**, not other run-times. It's not a generic _export_ command, and there's no guarantee that bundling code won't introduce a dependency on some Deno-specific platform feature
+`deno bundle` was my first thought at a proof-of-concept demonstration, but it's not a good fit for this use.
+The `bundle` command generates code for **Deno**, not other run-times.
+It's not a generic _export_ command, and there's no guarantee that bundling code won't introduce a dependency on some Deno-specific platform feature
 
 Next I looked at Deno's [node standard library][node-compat]. That module allows us to run node-on-deno; we're going in the other direction.
 
@@ -54,7 +54,10 @@ Finally, Deno supports building and bundling pragmatically through the `Deno.bun
 
 Given the above, the simplest path to compatibility ended up being a [very small shell script][shell].
 
-Turns out, [`find`][find] and [`sed`][sed] work really well together when we need to rewrite predictable strings like import specifiers. Once rewritten, we can let the TypeScript Compiler do it's thing. This solution isn't robust &mdash; but it is _sufficient_. If Deno-first proves to be a productive way to write cross-platform TypeScript, then the efficiency and dependency gains for using the `Deno.bundle` and `Deno.build` will be well worth exploring.
+Turns out, [`find`][find] and [`sed`][sed] work really well together when we need to rewrite predictable strings like import specifiers.
+Once rewritten, we can let the TypeScript Compiler do it's thing.
+This solution isn't robust &mdash; but it is _sufficient_.
+If Deno-first proves to be a productive way to write cross-platform TypeScript, then the efficiency and dependency gains for using the `Deno.bundle` and `Deno.build` will be well worth exploring.
 
 ## Project Structure
 
@@ -64,7 +67,7 @@ Here are the highlights for our project's structure. Important files and folders
 
 The project's root folder contains:
 
-- `./lock-file.json` &mdash; lets Deno warn us if the dependencies we've downloaded don't match the ones we originally used.
+- `./lock_file.json` &mdash; lets Deno warn us if the dependencies we've downloaded don't match the ones we originally used.
   Pulling in code from the internet requires trust, and by using a lockfile, Deno can tell us when that trust may have been violated.
 - `./Makefile` &mdash; there's no equivalent to NPM `package.json` scripts in Deno.
   I don't know of any source-code management program that's more ubiquitous, more powerful, easier to use, and easier to understand than `make`.
@@ -105,14 +108,14 @@ We need to use explicit import specifiers in this folder, but otherwise should a
 
 ### `./source/lib/`
 
-Each platform we _target_ will have it's own version of the `lib/` folder, `target/[platform]/source/lib/`, that exports to a common interface.
+Each platform we support will have it's own version of the `lib/` folder, `platform/[platform]/source/lib/`, that exports to a common interface.
 `lib/` contains library code that was written to run on _Deno_, and isn't copied, compiled, or transformed when generating source code for other platforms.
-It's assumed that every target needs its own platform-specific library code.
+It's assumed that every platform needs its own platform-specific library code.
 
 ### `./source/test/`
 
 Like `./source/lib/`, `test/` contains platform-specific unit tests.
-General tests should be co-located with your source code in `app/` so that they can be run on every platform you target.
+General tests should be co-located with your source code in `app/` so that they can be run on every platform you support.
 Tests located here won't be copied or translated for other platforms by `make build`.
 
 ### `./platform/<name>`
