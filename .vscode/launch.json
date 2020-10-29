@@ -5,20 +5,35 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug TS in Deno",
+      "name": "deno test",
       "type": "node",
       "request": "launch",
-      "cwd": "${workspaceFolder}/${relativeFileDirname}/",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "deno",
+      "runtimeArgs": [
+        "test",
+        "--inspect-brk",
+        "--unstable",
+        "--allow-all",
+        "${file}"
+      ],
+      "env": {
+        "DENO_DIR": "${workspaceFolder}/.deno",
+      },
+      "port": 9229,
+      "outputCapture": "std"
+    },
+    {
+      "name": "deno run",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
       "runtimeExecutable": "deno",
       "runtimeArgs": [
         "run",
-        "--lock=${workspaceFolder}/lock_file.json",
-        "--cached-only",
         "--inspect-brk",
         "--unstable",
-        "--allow-run",
-        "--allow-read=\"${workspaceFolder}\"",
-        "--allow-write=\"${workspaceFolder}\"",
+        "--allow-all",
         "${file}"
       ],
       "env": {
