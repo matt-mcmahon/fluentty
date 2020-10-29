@@ -1,5 +1,5 @@
-import { accept, ask, defaultTo, prompt, retry } from "./prompt.ts";
-import type { Set } from "./configure.ts";
+import type { Set } from "../configure.ts";
+import { accept, ask, defaultTo, prompt, retry } from "../prompt.ts";
 
 export const configNPM = (set: Set) =>
   ask("NPM executable")
