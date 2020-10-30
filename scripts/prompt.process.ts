@@ -1,8 +1,9 @@
-import { bgBrightYellow, bold, red } from "./remote/colors.ts";
+import { bgBrightYellow, bold, red } from "../remote/colors.ts";
 import {
   accept,
   ask,
   defaultTo,
+  format,
   prompt,
   retry,
   sanitize,
@@ -18,6 +19,12 @@ await ask("What is your favorite color")
 
 await ask("Which way?")
   .then(accept("left", "right"))
+  .then(sanitize((input, options) => {
+    const maybe: string[] = options.accept.reduce((maybe, option) => {
+      return option.startsWith(input.substr(0, 1)) ? [...maybe, option] : maybe;
+    }, [] as string[]);
+    return maybe.length === 1 ? maybe[0] : input;
+  }))
   .then(retry())
   .then(prompt)
   .then((input) => stdout(`You go ${input}.\n`));
@@ -25,7 +32,7 @@ await ask("Which way?")
 await ask("What is your quest")
   .then(retry())
   .then(validate((input) => input.length > 4))
-  .then(sanitize((input) => {
+  .then(format((input) => {
     return bold(bgBrightYellow(red(`"${input}!"`)));
   }))
   .then(prompt)
