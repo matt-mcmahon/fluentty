@@ -1,4 +1,4 @@
-import { assertEquals, fail } from "./asserts.ts";
+import { assertEquals, fail } from "../../remote/asserts.ts";
 
 const moduleId = Deno.env.get("NPM_PACKAGE_NAME");
 
