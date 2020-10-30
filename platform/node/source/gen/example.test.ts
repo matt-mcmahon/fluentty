@@ -1,4 +1,4 @@
-import { describe } from "../lib/remote/describe";
+import { describe } from "../lib/describe";
 import { example } from "./example";
 
 describe("typeof example", ({ assert }) => {
