@@ -1,23 +1,26 @@
-import { configCache } from "./configure_cache.ts";
-import { configImportMap } from "./configure_import_map.ts";
-import { configMakefiles } from "./configure_makefile.ts";
-import { configNPM } from "./configure_npm.ts";
-import { configPackageJSON } from "./configure_package.ts";
+import { configCache } from "./configure/cache.ts";
+import { configImportMap } from "./configure/import_map.ts";
+import { configMakefiles } from "./configure/makefile.ts";
+import { configNPM } from "./configure/npm.ts";
+import { configPackageJSON } from "./configure/package.ts";
 import { verifyWriteTextFile } from "./prompt.ts";
 
+import denoMk from "./makefiles/deno.ts";
+import nodeMk from "./makefiles/node.ts";
+
 export type Env = Map<string, string>;
-export type Set = (
-  key: string,
-) => (value: Promise<string> | string) => Promise<void>;
 
 const envToString = async (env: Env) =>
   [...env.entries()].map((e) => e.join("=")).join("\n");
 
 const env = new Map<string, string>();
 
-const set: Set = (key: string) =>
-  async (value: Promise<string> | string) => {
+export type Set = typeof set;
+
+const set = (key: string) =>
+  async (value: string) => {
     env.set(key, await Promise.resolve(value));
+    return value;
   };
 
 await configImportMap(set);
@@ -27,4 +30,9 @@ await configPackageJSON(set);
 
 await envToString(env)
   .then(verifyWriteTextFile(".env"))
-  .then(configMakefiles);
+  .then();
+
+await configMakefiles([
+  ["Makefile", denoMk],
+  ["platform/node/Makefile", nodeMk],
+]);
