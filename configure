@@ -5,5 +5,5 @@ deno "run" \
 	"--allow-read=$PWD" \
 	"--allow-write=$PWD" \
 	"--unstable" \
-	"file:///$PWD/scripts/configure.ts" \
+	"file:///$PWD/configure.js"  \
 	"$@"
