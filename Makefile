@@ -1,1 +1,1 @@
-scripts/makefiles/deno.mk
+./source/app/makefiles/deno.mk
