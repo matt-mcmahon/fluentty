@@ -9,10 +9,14 @@ export
 #
 # DENO_DIR=
 #
+DENO_BUNDLE_FILE       ?= mod.js
+DENO_DEPENDENCIES_FILE ?= dependencies.ts
 DENO_DIR               ?= .deno
 DENO_MAIN              ?= mod.ts
+DENO_SOURCE_DIR        ?= source
 IMPORT_MAP             ?=
 LOCK_FILE              ?= lock_file.json
+NPM                    ?= npm
 RUN_PERMISSIONS        ?=
 TEST_PERMISSIONS       ?= --allow-read=./source,. --allow-run
 USE_CACHE              ?= --cached-only
@@ -23,29 +27,24 @@ USE_UNSTABLE           ?=
 #
 # Do NOT set these values to nothing.
 #
-DENO_BUNDLE_FILE       ?= mod.js
-DENO_DEPENDENCIES_FILE ?= dependencies.ts
-DENO_SOURCE_DIR        ?= source
+DENO_ABS               := $(PWD)/$(DENO_DIR)
 DENO_APP_DIR           ?= $(DENO_SOURCE_DIR)/app
 DENO_LIB_DIR           ?= $(DENO_SOURCE_DIR)/lib
 
-DENO_ABS               := $(PWD)/$(DENO_DIR)
-
 GEN_DIR                ?= /dev/null
 
-NPM                    ?= npm
 NPM_INSTALL            ?= $(NPM) install
 NPM_RUN                ?= $(NPM) run
 NPM_LINK               ?= $(NPM) link
 NPM_UNLINK             ?= $(NPM) unlink
 
-SOURCE_FILES           := $(shell find "$(DENO_SOURCE_DIR)" -type f -name "*.ts")
-LINT_FILES             := $(shell find "$(DENO_SOURCE_DIR)" -type f -name "*.ts" -not -name "*.test.ts")
-REMOTE_DIRS            := $(shell find $(shell ls .) -type d -name "remote")
-REMOTE_DEPENDENCIES    := $(shell find "$(REMOTE_DIRS)" -type f -name "*.ts")
+INTEGRATIONS           := $(shell find "./integration-test/" -maxdepth 1 -mindepth 1 -type d)
+PLATFORMS              := $(shell find "./platform/"         -maxdepth 1 -mindepth 1 -type d)
+REMOTE_DIRS            := $(shell find "."                   -type d -name "remote" -not -path '*/\.*')
 
-PLATFORMS              := $(shell find ./platform/         -maxdepth 1 -mindepth 1 -type d)
-INTEGRATIONS           := $(shell find ./integration-test/ -maxdepth 1 -mindepth 1 -type d)
+LINT_FILES             := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts" -not -name "*.test.ts")
+REMOTE_DEPENDENCIES    := $(shell find "$(REMOTE_DIRS)"      -type f -name "*.ts")
+SOURCE_FILES           := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts")
 
 ifneq ($(IMPORT_MAP),)
 IMPORT_MAP_OPTIONS     := --importmap $(IMPORT_MAP)
@@ -56,10 +55,6 @@ ifneq ($(LOCK_FILE),)
 LOCK_OPTIONS           := --lock $(LOCK_FILE)
 LOCK_OPTIONS_WRITE     := --lock $(LOCK_FILE) --lock-write
 endif
-
-define NEWLINE
-
-endef
 
 define print_header
 	@echo
@@ -97,7 +92,7 @@ endif
 endif
 
 ifneq ($(DENO_BUNDLE_FILE),)
-$(DENO_BUNDLE_FILE): $(LINT_FILES) scripts/makefiles
+$(DENO_BUNDLE_FILE): $(LINT_FILES)
 	@echo "// deno-fmt-ignore-file"   > $(DENO_BUNDLE_FILE)
 	@echo "// deno-lint-ignore-file" >> $(DENO_BUNDLE_FILE)
 	@echo "// @ts-nocheck"           >> $(DENO_BUNDLE_FILE)
@@ -129,11 +124,10 @@ build: .header(build) $(DENO_BUNDLE_FILE)
 	$(MAKE) TARGET=$@ do-integration-action
 
 clean: .header(clean)
-	$(MAKE) DENO_DIR=$(DENO_ABS) -C scripts/makefiles clean
 	$(MAKE) TARGET=$@ do-platform-action
 	$(MAKE) TARGET=$@ do-integration-action
 
-configure: scripts/makefiles
+configure:
 	./configure
 
 do-platform-action: $(PLATFORMS)
@@ -172,9 +166,6 @@ lint-quiet:
 run:
 	deno run $(RUN_PERMISSIONS) $(DENO_MAIN)
 
-scripts/makefiles:
-	$(MAKE) DENO_DIR=$(DENO_ABS) -C $@
-
 test: .header(test) $(LOCK_FILE)
 	deno test --unstable --coverage \
 		$(TEST_PERMISSIONS) \
@@ -183,15 +174,7 @@ test: .header(test) $(LOCK_FILE)
 		$(IMPORT_MAP_OPTIONS) \
 		$(DENO_SOURCE_DIR)
 
-test-scripts: .header(test) $(LOCK_FILE)
-	deno test \
-		--unstable --coverage --allow-write --allow-read --allow-run \
-		$(LOCK_OPTIONS) \
-		$(USE_CACHE) \
-		$(IMPORT_MAP_OPTIONS) \
-		scripts
-
-test-all: .header(test) test test-scripts
+test-all: .header(test) test
 	$(MAKE) TARGET=test do-platform-action
 	$(MAKE) TARGET=test do-integration-action
 
@@ -220,6 +203,5 @@ upgrade:
 	install \
 	lint lint-quiet \
 	run \
-	scripts/makefiles \
-	test test-quiet test-scripts test-watch \
+	test test-quiet test-watch \
 	$(PLATFORMS) $(INTEGRATIONS)
