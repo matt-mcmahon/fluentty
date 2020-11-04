@@ -3,7 +3,7 @@ import { forceWriteTextFile, verifyWriteTextFile } from "../prompt.ts";
 import { checkForErrors, configureTestProcess, strip } from "../utils.ts";
 
 const spawnTest = configureTestProcess(
-  "scripts/configure/import_map.process.ts",
+  "source/configure/import_map.process.ts",
 );
 
 const promptUseImportMap = "Use an import-map: (yes/no)";

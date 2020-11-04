@@ -1,6 +1,6 @@
 import { AssertFunction } from "../remote/asserts.ts";
 import { stripColor } from "../remote/colors.ts";
-import type { Set } from "./configure.ts";
+import type { SetEnv } from "./configure.ts";
 import { getOutput, sendInput } from "./prompt.ts";
 
 export type JSONData = ReturnType<typeof JSON.parse>;
@@ -39,19 +39,19 @@ export async function checkForErrors(tp: TP) {
   return err;
 }
 
-export type TP = {
+export type TP = Readonly<{
   process: Deno.Process;
   tempDir: string;
   write: (message?: string) => Promise<number>;
   read: () => Promise<string>;
   readError: () => Promise<string>;
   end: () => Promise<void>;
-};
+}>;
 
 export function configureTestProcess(script: string) {
-  return async ({ preTest, postTest }: {
-    preTest?: (tp: TP) => Promise<void>;
-    postTest?: (tp: TP) => Promise<void>;
+  return async ({ pretest, posttest }: {
+    pretest?: (tp: TP) => Promise<TP>;
+    posttest?: (tp: TP) => Promise<TP>;
   } = {}): Promise<TP> => {
     const tempDir = await Deno.makeTempDir({ prefix: "test-" });
 
@@ -62,18 +62,21 @@ export function configureTestProcess(script: string) {
       stdout: "piped",
     });
 
-    const end = async () => {
-      await Promise.allSettled([
-        process.stderr.close(),
-        process.stdin.close(),
-        process.stdout.close(),
-        process.close(),
-        Deno.remove(tempDir, { recursive: true }),
-      ]);
-      postTest && await postTest(tp);
-    };
+    const end = (): Promise<void> =>
+      process.status()
+        .then(({ success }) => {
+          return success ? tp : Promise.reject(process.stderrOutput());
+        })
+        .then(posttest)
+        .then(() => Deno.remove(tempDir, { recursive: true }))
+        .finally(() => {
+          process.stderr.close();
+          process.stdin.close();
+          process.stdout.close();
+          process.close();
+        });
 
-    const tp = {
+    const tp: TP = {
       process,
       tempDir,
       write: sendInput(process.stdin),
@@ -82,7 +85,7 @@ export function configureTestProcess(script: string) {
       end,
     };
 
-    if (preTest != null) await preTest(tp);
+    if (pretest != null) await pretest(tp);
 
     return tp;
   };
@@ -90,11 +93,11 @@ export function configureTestProcess(script: string) {
 
 export function makeSetter(): [
   () => Record<string, string>,
-  Set,
+  SetEnv,
 ] {
   const actual: Record<string, string> = {};
 
-  const set: Set = (key: string) =>
+  const set: SetEnv = (key: string) =>
     async (value: Promise<string> | string) => {
       actual[key] = await value;
       return value;

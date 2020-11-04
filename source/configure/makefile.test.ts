@@ -1,16 +1,10 @@
 import { assertEquals } from "../../remote/asserts.ts";
 import { exists } from "../../remote/fs.ts";
 import { forceWriteTextFile } from "../prompt.ts";
-import {
-  checkForErrors,
-  configureTestProcess,
-  makeExpects,
-  strip,
-} from "../utils.ts";
-import { configMakefiles } from "./makefile.ts";
+import { checkForErrors, configureTestProcess, strip } from "../utils.ts";
 
 const startTestProcess = configureTestProcess(
-  "scripts/configure/makefile.process.ts",
+  "source/configure/makefile.process.ts",
 );
 
 async function test(path: string, data: string) {

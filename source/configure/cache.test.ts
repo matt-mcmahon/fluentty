@@ -6,7 +6,7 @@ const promptDenoDir = "Local Deno cache directory: (.deno)";
 const promptLockFileName = "Lock-File Name: (lock_file.json)";
 
 const spawnTestProcess = configureTestProcess(
-  "scripts/configure/cache.process.ts",
+  "source/configure/cache.process.ts",
 );
 
 Deno.test("cache.ts :: default values", async () => {

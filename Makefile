@@ -18,9 +18,9 @@ IMPORT_MAP             ?=
 LOCK_FILE              ?= lock_file.json
 NPM                    ?= npm
 RUN_PERMISSIONS        ?=
-TEST_PERMISSIONS       ?= --allow-read=./source,. --allow-run
+TEST_PERMISSIONS       ?= --allow-run --allow-read --allow-write
 USE_CACHE              ?= --cached-only
-USE_UNSTABLE           ?=
+USE_UNSTABLE           ?= --unstable
 
 # The default values for these settings are meant to be easily overwritten by
 # your project's .env file.
@@ -31,9 +31,7 @@ DENO_DIR_ABS           := $(PWD)/$(DENO_DIR)
 
 GEN_DIR                ?= /dev/null
 
-INTEGRATIONS           := $(shell find "./integration-test/" -maxdepth 1 -mindepth 1 -type d)
-PLATFORMS              := $(shell find "./platform/"         -maxdepth 1 -mindepth 1 -type d)
-REMOTE_DIRS            := $(shell find "."                   -type d -name "remote" -not -path '*/\.*')
+REMOTE_DIRS            := remote
 
 LINT_FILES             := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts" -not -name "*.test.ts")
 REMOTE_DEPENDENCIES    := $(shell find "$(REMOTE_DIRS)"      -type f -name "*.ts")
@@ -106,10 +104,6 @@ clean: .header(clean)
 configure:
 	./configure
 
-do-platform-action: $(PLATFORMS)
-
-do-integration-action: $(INTEGRATIONS)
-
 fmt: format
 
 format:
@@ -175,5 +169,4 @@ upgrade:
 	install \
 	lint lint-quiet \
 	run \
-	test test-quiet test-watch \
-	$(PLATFORMS) $(INTEGRATIONS)
+	test test-quiet test-watch

@@ -18,6 +18,11 @@ function bold(str) {
         1
     ], 22));
 }
+function dim(str) {
+    return run(str, code([
+        2
+    ], 22));
+}
 function red(str) {
     return run(str, code([
         31
@@ -39,6 +44,11 @@ function gray(str) {
 function brightBlack(str) {
     return run(str, code([
         90
+    ], 39));
+}
+function brightWhite(str) {
+    return run(str, code([
+        97
     ], 39));
 }
 function clampAndTruncate(n, max = 255, min = 0) {
@@ -117,7 +127,7 @@ function existsSync(filePath) {
         throw err;
     }
 }
-function assert2(expr, msg = "") {
+function assert(expr, msg = "") {
     if (!expr) {
         throw new DenoStdInternalError(msg);
     }
@@ -180,8 +190,8 @@ async function* walk(root, { maxDepth =Infinity , includeFiles =true , includeDi
                 continue;
             }
         }
-        assert2(entry.name != null);
-        const path = join1(root, entry.name);
+        assert(entry.name != null);
+        const path = join(root, entry.name);
         if (entry.isFile) {
             if (includeFiles && include(path, exts, match, skip)) {
                 yield {
@@ -221,8 +231,8 @@ function* walkSync(root, { maxDepth =Infinity , includeFiles =true , includeDirs
                 continue;
             }
         }
-        assert2(entry.name != null);
-        const path = join1(root, entry.name);
+        assert(entry.name != null);
+        const path = join(root, entry.name);
         if (entry.isFile) {
             if (includeFiles && include(path, exts, match, skip)) {
                 yield {
@@ -307,8 +317,8 @@ async function copyFile(src, dest, options) {
     await Deno.copyFile(src, dest);
     if (options.preserveTimestamps) {
         const statInfo = await Deno.stat(src);
-        assert2(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert2(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         await Deno.utime(dest, statInfo.atime, statInfo.mtime);
     }
 }
@@ -317,8 +327,8 @@ function copyFileSync(src, dest, options) {
     Deno.copyFileSync(src, dest);
     if (options.preserveTimestamps) {
         const statInfo = Deno.statSync(src);
-        assert2(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert2(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         Deno.utimeSync(dest, statInfo.atime, statInfo.mtime);
     }
 }
@@ -335,8 +345,8 @@ async function copySymLink(src, dest, options) {
     }
     if (options.preserveTimestamps) {
         const statInfo = await Deno.lstat(src);
-        assert2(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert2(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         await Deno.utime(dest, statInfo.atime, statInfo.mtime);
     }
 }
@@ -353,8 +363,8 @@ function copySymlinkSync(src, dest, options) {
     }
     if (options.preserveTimestamps) {
         const statInfo = Deno.lstatSync(src);
-        assert2(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert2(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         Deno.utimeSync(dest, statInfo.atime, statInfo.mtime);
     }
 }
@@ -365,13 +375,13 @@ async function copyDir(src, dest, options) {
     }
     if (options.preserveTimestamps) {
         const srcStatInfo = await Deno.stat(src);
-        assert2(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert2(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        assert(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         await Deno.utime(dest, srcStatInfo.atime, srcStatInfo.mtime);
     }
     for await (const entry of Deno.readDir(src)){
-        const srcPath = join1(src, entry.name);
-        const destPath = join1(dest, basename(srcPath));
+        const srcPath = join(src, entry.name);
+        const destPath = join(dest, basename(srcPath));
         if (entry.isSymlink) {
             await copySymLink(srcPath, destPath, options);
         } else if (entry.isDirectory) {
@@ -388,14 +398,14 @@ function copyDirSync(src, dest, options) {
     }
     if (options.preserveTimestamps) {
         const srcStatInfo = Deno.statSync(src);
-        assert2(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert2(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        assert(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         Deno.utimeSync(dest, srcStatInfo.atime, srcStatInfo.mtime);
     }
     for (const entry of Deno.readDirSync(src)){
-        assert2(entry.name != null, "file.name must be set");
-        const srcPath = join1(src, entry.name);
-        const destPath = join1(dest, basename(srcPath));
+        assert(entry.name != null, "file.name must be set");
+        const srcPath = join(src, entry.name);
+        const destPath = join(dest, basename(srcPath));
         if (entry.isSymlink) {
             copySymlinkSync(srcPath, destPath, options);
         } else if (entry.isDirectory) {
@@ -835,7 +845,7 @@ function normalizeGlob(glob, { globstar =false  } = {
 function joinGlobs(globs, { extended =false , globstar =false  } = {
 }) {
     if (!globstar || globs.length == 0) {
-        return join1(...globs);
+        return join(...globs);
     }
     if (globs.length === 0) return ".";
     let joined;
@@ -1067,7 +1077,7 @@ const _win32 = function() {
         if (joined === undefined) return ".";
         let needsReplace = true;
         let slashCount = 0;
-        assert2(firstPart != null);
+        assert(firstPart != null);
         if (isPathSeparator(firstPart.charCodeAt(0))) {
             ++slashCount;
             const firstLen = firstPart.length;
@@ -1906,7 +1916,7 @@ const _posix = function() {
     };
 }();
 const path = isWindows2 ? _win32 : _posix;
-const { basename , delimiter , dirname , extname , format , fromFileUrl , isAbsolute , join: join1 , normalize , parse , relative , resolve , sep , toFileUrl , toNamespacedPath ,  } = path;
+const { basename , delimiter , dirname , extname , format , fromFileUrl , isAbsolute , join , normalize , parse , relative , resolve , sep , toFileUrl , toNamespacedPath ,  } = path;
 const SEP = isWindows2 ? "\\" : "/";
 const SEP_PATTERN = isWindows2 ? /[\\/]+/ : /\/+/;
 var DiffType;
@@ -2282,8 +2292,8 @@ async function configPackageJSON(set1, { sourceDir ="." , targetDir ="platform/n
     if (!configure) return;
     const sourceFile = sourceDir + "/package.json";
     const targetFile = targetDir + "/package.json";
-    assert(exists(sourceDir), `ERROR: source dir, ${sourceDir}, does not exist`);
-    assert(exists(targetDir), `ERROR: target dir, ${sourceDir}, does not exist`);
+    assert1(exists(sourceDir), `ERROR: source dir, ${sourceDir}, does not exist`);
+    assert1(exists(targetDir), `ERROR: target dir, ${sourceDir}, does not exist`);
     const overwrite = await overwriteTargetFile(targetFile);
     if (overwrite === "cancel") return;
     const existingJSON = overwrite === "merge" ? await Deno.readTextFile(targetFile).then(parseJSON).catch(()=>({
@@ -2309,7 +2319,7 @@ async function configPackageJSON(set1, { sourceDir ="." , targetDir ="platform/n
 const envToString = async (env)=>[
         ...env.entries()
     ].map((e)=>e.join("=")
-    ).join("\n")
+    ).sort().join("\n").concat("\n")
 ;
 const env = new Map();
 const set1 = (key)=>async (value)=>{
@@ -2321,15 +2331,15 @@ await configImportMap(set1);
 await configNPM(set1);
 await configCache(set1);
 await configPackageJSON(set1);
-await envToString(env).then(verifyWriteTextFile(".env")).then();
+await envToString(env).then(verifyWriteTextFile(".env"));
 await configMakefiles([
     [
         "Makefile",
-        '# Include, then immediately export, environment variables in .env file.\n# These variables will be available to the Deno CLI.\ninclude .env\nexport\n\n# These settings can be safely disabled by setting the VARIABLE_NAME to nothing\n# in your deployment\'s .env file. For example, setting the following would\n# disable the local Deno cache in favor of Deno\'s global cache:\n#\n# DENO_DIR=\n#\nDENO_DIR               ?= .deno\nDENO_MAIN              ?= mod.ts\nIMPORT_MAP             ?=\nLOCK_FILE              ?= lock_file.json\nRUN_PERMISSIONS        ?=\nTEST_PERMISSIONS       ?= --allow-read=./source,. --allow-run\nUSE_CACHE              ?= --cached-only\nUSE_UNSTABLE           ?=\n\n# The default values for these settings are meant to be easily overwritten by\n# your project\'s .env file.\n#\n# Do NOT set these values to nothing.\n#\nDENO_BUNDLE_FILE       ?= mod.js\nDENO_DEPENDENCIES_FILE ?= dependencies.ts\nDENO_SOURCE_DIR        ?= source\nDENO_APP_DIR           ?= $(DENO_SOURCE_DIR)/app\nDENO_LIB_DIR           ?= $(DENO_SOURCE_DIR)/lib\n\nDENO_ABS               := $(PWD)/$(DENO_DIR)\n\nGEN_DIR                ?= /dev/null\n\nNPM                    ?= npm\nNPM_INSTALL            ?= $(NPM) install\nNPM_RUN                ?= $(NPM) run\nNPM_LINK               ?= $(NPM) link\nNPM_UNLINK             ?= $(NPM) unlink\n\nSOURCE_FILES           := $(shell find \"$(DENO_SOURCE_DIR)\" -type f -name \"*.ts\")\nLINT_FILES             := $(shell find \"$(DENO_SOURCE_DIR)\" -type f -name \"*.ts\" -not -name \"*.test.ts\")\nREMOTE_DIRS            := $(shell find $(shell ls .) -type d -name \"remote\")\nREMOTE_DEPENDENCIES    := $(shell find \"$(REMOTE_DIRS)\" -type f -name \"*.ts\")\n\nPLATFORMS              := $(shell find ./platform/         -maxdepth 1 -mindepth 1 -type d)\nINTEGRATIONS           := $(shell find ./integration-test/ -maxdepth 1 -mindepth 1 -type d)\n\nifneq ($(IMPORT_MAP),)\nIMPORT_MAP_OPTIONS     := --importmap $(IMPORT_MAP)\nUSE_UNSTABLE           := --unstable\nendif\n\nifneq ($(LOCK_FILE),)\nLOCK_OPTIONS           := --lock $(LOCK_FILE)\nLOCK_OPTIONS_WRITE     := --lock $(LOCK_FILE) --lock-write\nendif\n\ndefine NEWLINE\n\nendef\n\ndefine print_header\n\t@echo\n\t@echo $1\n\t@echo\nendef\n\nall: install lint build test-all\n\nifneq ($(PLATFORMS),)\n$(PLATFORMS):\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C $@ $(TARGET)\nendif\n\nifneq ($(INTEGRATIONS),)\n$(INTEGRATIONS):\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C $@ $(TARGET)\nendif\n\nifneq ($(LOCK_FILE),)\n$(LOCK_FILE): $(REMOTE_DEPENDENCIES) $(DENO_DEPENDENCIES_FILE)\n\t@read -p \\\n\t\t\"Dependencies have changed. Press [Enter] to update the cache and $(LOCK_FILE), or [Ctrl]+[C] to cancel:\" \\\n\t\tcancel\nifneq ($(RELOAD),)\n\t@echo \"Deleting $(DENO_DIR)...\"\n\trm -rf $(DENO_DIR)\nendif\n\tdeno cache --unstable \\\n\t\t$(RELOAD) \\\n\t\t$(RUN_PERMISSIONS) \\\n\t\t$(LOCK_OPTIONS_WRITE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(DENO_DEPENDENCIES_FILE)\nendif\n\nifneq ($(DENO_BUNDLE_NAME),)\n$(DENO_BUNDLE_NAME): $(LINT_FILES) scripts/makefiles\n\t@echo \"// deno-fmt-ignore-file\"   > $(DENO_BUNDLE_NAME)\n\t@echo \"// deno-lint-ignore-file\" >> $(DENO_BUNDLE_NAME)\n\t@echo \"// @ts-nocheck\"           >> $(DENO_BUNDLE_NAME)\n\tdeno bundle \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(USE_UNSTABLE) \\\n\t\t$(DENO_MAIN) \\\n\t\t>> $(DENO_BUNDLE_NAME)\nendif\n\nifneq ($(GEN_DIR),)\n$(GEN_DIR): $(SOURCE_FILES)\n\tmkdir -p $@\n\trsync -am --include=\"*.ts\" --delete-during \\\n\t\t$(DENO_APP_DIR)/ \\\n\t\t$@/\n\tfind $@ -type f -name \"*.ts\" -exec \\\n\t\tsed -i -E \"s/(from \\\"\\..+)(\\.d.ts)|(\\.ts)(\\\";?)/\\1\\4/g\" {} +\nendif\n\nifneq ($(DENO_DEPENDENCIES_FILE),)\n$(DENO_DEPENDENCIES_FILE): $(REMOTE_DEPENDENCIES)\n\t$(file > $(DENO_DEPENDENCIES_FILE),$(patsubst %,import \"./%\";,$(REMOTE_DEPENDENCIES)))\n\tdeno fmt $(DENO_DEPENDENCIES_FILE)\nendif\n\nbuild: .header(build) $(DENO_BUNDLE_NAME)\n\t$(MAKE) TARGET=$@ do-platform-action\n\t$(MAKE) TARGET=$@ do-integration-action\n\nclean: .header(clean)\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C scripts/makefiles clean\n\t$(MAKE) TARGET=$@ do-platform-action\n\t$(MAKE) TARGET=$@ do-integration-action\n\nconfigure: scripts/makefiles\n\t./configure\n\ndo-platform-action: $(PLATFORMS)\n\ndo-integration-action: $(INTEGRATIONS)\n\nfmt: format\n\nformat:\n\tdeno fmt $(DENO_SOURCE_DIR) $(DENO_LIB_DIR)\n\n.header(build):\n\t$(call print_header, Building...)\n\n.header(clean):\n\t$(call print_header, Cleaning...)\n\n.header(install):\n\t$(call print_header, Installing...)\n\n.header(test):\n\t$(call print_header, Testing...)\n\ninstall: .header(install) $(LOCK_FILE)\n\t$(MAKE) TARGET=$@ do-platform-action\n\t$(MAKE) TARGET=$@ do-integration-action\n\nlint:\n\tdeno fmt --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)\n\t-deno lint --unstable $(RUN_PERMISSIONS) $(LINT_FILES)\n\nlint-quiet:\n\tdeno fmt --quiet --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)\n\t-deno lint --quiet --unstable $(RUN_PERMISSIONS) $(LINT_FILES)\n\nrun:\n\tdeno run $(RUN_PERMISSIONS) $(DENO_MAIN)\n\nscripts/makefiles:\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C $@\n\ntest: .header(test) $(LOCK_FILE)\n\tdeno test --unstable --coverage \\\n\t\t$(TEST_PERMISSIONS) \\\n\t\t$(LOCK_OPTIONS) \\\n\t\t$(USE_CACHE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(DENO_SOURCE_DIR)\n\ntest-scripts: .header(test) $(LOCK_FILE)\n\tdeno test \\\n\t\t--unstable --coverage --allow-write --allow-read --allow-run \\\n\t\t$(LOCK_OPTIONS) \\\n\t\t$(USE_CACHE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\tscripts\n\ntest-all: .header(test) test test-scripts\n\t$(MAKE) TARGET=test do-platform-action\n\t$(MAKE) TARGET=test do-integration-action\n\ntest-quiet: .header(test) $(LOCK_FILE)\n\tdeno test --unstable --failfast --quiet \\\n\t\t$(TEST_PERMISSIONS) \\\n\t\t$(LOCK_OPTIONS) \\\n\t\t$(USE_CACHE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(DENO_SOURCE_DIR)\n\ntest-watch: .header(test)\n\twhile inotifywait -e close_write $(DENO_APP_DIR); do make test; done\n\nupgrade:\n\t$(MAKE) --always-make RELOAD=--reload $(LOCK_FILE)\n\n.PHONY: \\\n\tall \\\n\tbuild \\\n\tclean configure \\\n\tdeno \\\n\tdo-platform-action do-integration-action \\\n\tfmt format \\\n\t.header(build) .header(clean) .header(install) .header(test) \\\n\tinstall \\\n\tlint lint-quiet \\\n\trun \\\n\tscripts/makefiles \\\n\ttest test-quiet test-scripts test-watch \\\n\t$(PLATFORMS) $(INTEGRATIONS)\n'
+        '# Include, then immediately export, environment variables in .env file.\n# These variables will be available to the Deno CLI.\ninclude .env\nexport\n\n# These settings can be safely disabled by setting the VARIABLE_NAME to nothing\n# in your deployment\'s .env file. For example, setting the following would\n# disable the local Deno cache in favor of Deno\'s global cache:\n#\n# DENO_DIR=\n#\nDENO_DIR               ?= .deno\nDENO_MAIN              ?= mod.ts\nIMPORT_MAP             ?=\nLOCK_FILE              ?= lock_file.json\nRUN_PERMISSIONS        ?=\nTEST_PERMISSIONS       ?= --allow-read=./source,. --allow-run\nUSE_CACHE              ?= --cached-only\nUSE_UNSTABLE           ?=\n\n# The default values for these settings are meant to be easily overwritten by\n# your project\'s .env file.\n#\n# Do NOT set these values to nothing.\n#\nDENO_BUNDLE_FILE       ?= mod.js\nDENO_DEPENDENCIES_FILE ?= dependencies.ts\nDENO_SOURCE_DIR        ?= source\nDENO_APP_DIR           ?= $(DENO_SOURCE_DIR)/app\nDENO_LIB_DIR           ?= $(DENO_SOURCE_DIR)/lib\n\nDENO_ABS               := $(PWD)/$(DENO_DIR)\n\nGEN_DIR                ?= /dev/null\n\nNPM                    ?= npm\nNPM_INSTALL            ?= $(NPM) install\nNPM_RUN                ?= $(NPM) run\nNPM_LINK               ?= $(NPM) link\nNPM_UNLINK             ?= $(NPM) unlink\n\nSOURCE_FILES           := $(shell find \"$(DENO_SOURCE_DIR)\" -type f -name \"*.ts\")\nLINT_FILES             := $(shell find \"$(DENO_SOURCE_DIR)\" -type f -name \"*.ts\" -not -name \"*.test.ts\")\nREMOTE_DIRS            := $(shell find $(shell ls .) -type d -name \"remote\")\nREMOTE_DEPENDENCIES    := $(shell find \"$(REMOTE_DIRS)\" -type f -name \"*.ts\")\n\nPLATFORMS              := $(shell find ./platform/         -maxdepth 1 -mindepth 1 -type d)\nINTEGRATIONS           := $(shell find ./integration-test/ -maxdepth 1 -mindepth 1 -type d)\n\nifneq ($(IMPORT_MAP),)\nIMPORT_MAP_OPTIONS     := --importmap $(IMPORT_MAP)\nUSE_UNSTABLE           := --unstable\nendif\n\nifneq ($(LOCK_FILE),)\nLOCK_OPTIONS           := --lock $(LOCK_FILE)\nLOCK_OPTIONS_WRITE     := --lock $(LOCK_FILE) --lock-write\nendif\n\ndefine NEWLINE\n\nendef\n\ndefine print_header\n\t@echo\n\t@echo $1\n\t@echo\nendef\n\nall: install lint build test-all\n\nifneq ($(PLATFORMS),)\n$(PLATFORMS):\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C $@ $(TARGET)\nendif\n\nifneq ($(INTEGRATIONS),)\n$(INTEGRATIONS):\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C $@ $(TARGET)\nendif\n\nifneq ($(LOCK_FILE),)\n$(LOCK_FILE): $(REMOTE_DEPENDENCIES) $(DENO_DEPENDENCIES_FILE)\n\t@read -p \\\n\t\t\"Dependencies have changed. Press [Enter] to update the cache and $(LOCK_FILE), or [Ctrl]+[C] to cancel:\" \\\n\t\tcancel\nifneq ($(RELOAD),)\n\t@echo \"Deleting $(DENO_DIR)...\"\n\trm -rf $(DENO_DIR)\nendif\n\tdeno cache --unstable \\\n\t\t$(RELOAD) \\\n\t\t$(RUN_PERMISSIONS) \\\n\t\t$(LOCK_OPTIONS_WRITE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(DENO_DEPENDENCIES_FILE)\nendif\n\nifneq ($(DENO_BUNDLE_FILE),)\n$(DENO_BUNDLE_FILE): $(LINT_FILES) scripts/makefiles\n\t@echo \"// deno-fmt-ignore-file\"   > $(DENO_BUNDLE_FILE)\n\t@echo \"// deno-lint-ignore-file\" >> $(DENO_BUNDLE_FILE)\n\t@echo \"// @ts-nocheck\"           >> $(DENO_BUNDLE_FILE)\n\tdeno bundle \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(USE_UNSTABLE) \\\n\t\t$(DENO_MAIN) \\\n\t\t>> $(DENO_BUNDLE_FILE)\nendif\n\nifneq ($(GEN_DIR),)\n$(GEN_DIR): $(SOURCE_FILES)\n\tmkdir -p $@\n\trsync -am --include=\"*.ts\" --delete-during \\\n\t\t$(DENO_APP_DIR)/ \\\n\t\t$@/\n\tfind $@ -type f -name \"*.ts\" -exec \\\n\t\tsed -i -E \"s/(from \\\"\\..+)(\\.d.ts)|(\\.ts)(\\\";?)/\\1\\4/g\" {} +\nendif\n\nifneq ($(DENO_DEPENDENCIES_FILE),)\n$(DENO_DEPENDENCIES_FILE): $(REMOTE_DEPENDENCIES)\n\t$(file > $(DENO_DEPENDENCIES_FILE),$(patsubst %,import \"./%\";,$(REMOTE_DEPENDENCIES)))\n\tdeno fmt $(DENO_DEPENDENCIES_FILE)\nendif\n\nbuild: .header(build) $(DENO_BUNDLE_FILE)\n\t$(MAKE) TARGET=$@ do-platform-action\n\t$(MAKE) TARGET=$@ do-integration-action\n\nclean: .header(clean)\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C scripts/makefiles clean\n\t$(MAKE) TARGET=$@ do-platform-action\n\t$(MAKE) TARGET=$@ do-integration-action\n\nconfigure: scripts/makefiles\n\t./configure\n\ndo-platform-action: $(PLATFORMS)\n\ndo-integration-action: $(INTEGRATIONS)\n\nfmt: format\n\nformat:\n\tdeno fmt $(DENO_SOURCE_DIR) $(DENO_LIB_DIR)\n\n.header(build):\n\t$(call print_header, Building...)\n\n.header(clean):\n\t$(call print_header, Cleaning...)\n\n.header(install):\n\t$(call print_header, Installing...)\n\n.header(test):\n\t$(call print_header, Testing...)\n\ninstall: .header(install) $(LOCK_FILE)\n\t$(MAKE) TARGET=$@ do-platform-action\n\t$(MAKE) TARGET=$@ do-integration-action\n\nlint:\n\tdeno fmt --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)\n\t-deno lint --unstable $(RUN_PERMISSIONS) $(LINT_FILES)\n\nlint-quiet:\n\tdeno fmt --quiet --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)\n\t-deno lint --quiet --unstable $(RUN_PERMISSIONS) $(LINT_FILES)\n\nrun:\n\tdeno run $(RUN_PERMISSIONS) $(DENO_MAIN)\n\nscripts/makefiles:\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C $@\n\ntest: .header(test) $(LOCK_FILE)\n\tdeno test --unstable --coverage \\\n\t\t$(TEST_PERMISSIONS) \\\n\t\t$(LOCK_OPTIONS) \\\n\t\t$(USE_CACHE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(DENO_SOURCE_DIR)\n\ntest-scripts: .header(test) $(LOCK_FILE)\n\tdeno test \\\n\t\t--unstable --coverage --allow-write --allow-read --allow-run \\\n\t\t$(LOCK_OPTIONS) \\\n\t\t$(USE_CACHE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\tscripts\n\ntest-all: .header(test) test test-scripts\n\t$(MAKE) TARGET=test do-platform-action\n\t$(MAKE) TARGET=test do-integration-action\n\ntest-quiet: .header(test) $(LOCK_FILE)\n\tdeno test --unstable --failfast --quiet \\\n\t\t$(TEST_PERMISSIONS) \\\n\t\t$(LOCK_OPTIONS) \\\n\t\t$(USE_CACHE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(DENO_SOURCE_DIR)\n\ntest-watch: .header(test)\n\twhile inotifywait -e close_write $(DENO_APP_DIR); do make test; done\n\nupgrade:\n\t$(MAKE) --always-make RELOAD=--reload $(LOCK_FILE)\n\n.PHONY: \\\n\tall \\\n\tbuild \\\n\tclean configure \\\n\tdeno \\\n\tdo-platform-action do-integration-action \\\n\tfmt format \\\n\t.header(build) .header(clean) .header(install) .header(test) \\\n\tinstall \\\n\tlint lint-quiet \\\n\trun \\\n\tscripts/makefiles \\\n\ttest test-quiet test-scripts test-watch \\\n\t$(PLATFORMS) $(INTEGRATIONS)\n'
     ],
     [
         "platform/node/Makefile",
-        'DEVELOPMENT_FILES := $(shell find \"$(PWD)/$(DENO_SOURCE_DIR)\" -type f -name \"*.ts\")\nGEN_DIR           := $(CURDIR)/source/gen\n\nall: install test build\n\n$(GEN_DIR): $(DEVELOPMENT_FILES)\n\t$(MAKE) GEN_DIR=$(GEN_DIR) -C $(PWD) $(GEN_DIR)\n\nbuild: $(GEN_DIR)\n\trm -rf build\n\t$(NPM_RUN) build-production\n\t$(NPM_LINK)\n\nclean:\n\t-$(NPM_UNLINK)\n\trm -rf .npmignore .nyc_output build node_modules $(GEN_DIR) test-build\n\ninstall:\n\t$(NPM_INSTALL)\n\ntest: test-build\n\t$(NPM_RUN) test\n\ntest-build: $(GEN_DIR)\n\trm -rf test-build\n\t$(NPM_RUN) build-development\n\n.PHONY: all clean install test\n'
+        'DEVELOPMENT_FILES := $(shell find \"$(PWD)/$(DENO_SOURCE_DIR)\" -type f -name \"*.ts\")\nGEN_DIR           := $(CURDIR)/source/gen\n\nNPM_INSTALL       ?= $(NPM) install\nNPM_RUN           ?= $(NPM) run\nNPM_LINK          ?= $(NPM) link\nNPM_UNLINK        ?= $(NPM) unlink\n\nall: install test build\n\n$(GEN_DIR): $(DEVELOPMENT_FILES)\n\t$(MAKE) GEN_DIR=$(GEN_DIR) -C $(PWD) $(GEN_DIR)\n\nbuild: $(GEN_DIR)\n\trm -rf build\n\t$(NPM_RUN) build-production\n\t$(NPM_LINK)\n\nclean:\n\t-$(NPM_UNLINK)\n\trm -rf .npmignore .nyc_output build node_modules $(GEN_DIR) test-build\n\ninstall:\n\t$(NPM_INSTALL)\n\ntest: test-build\n\t$(NPM_RUN) test\n\ntest-build: $(GEN_DIR)\n\trm -rf test-build\n\t$(NPM_RUN) build-development\n\n.PHONY: all clean install test\n'
     ], 
 ]);
 

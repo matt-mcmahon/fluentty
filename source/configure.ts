@@ -3,19 +3,22 @@ import { configImportMap } from "./configure/import_map.ts";
 import { configMakefiles } from "./configure/makefile.ts";
 import { configNPM } from "./configure/npm.ts";
 import { configPackageJSON } from "./configure/package.ts";
-import { verifyWriteTextFile } from "./prompt.ts";
-
 import denoMk from "./makefiles/deno.ts";
 import nodeMk from "./makefiles/node.ts";
+import { verifyWriteTextFile } from "./prompt.ts";
 
 export type Env = Map<string, string>;
 
 const envToString = async (env: Env) =>
-  [...env.entries()].map((e) => e.join("=")).join("\n");
+  [...env.entries()]
+    .map((e) => e.join("="))
+    .sort()
+    .join("\n")
+    .concat("\n");
 
 const env = new Map<string, string>();
 
-export type Set = typeof set;
+export type SetEnv = typeof set;
 
 const set = (key: string) =>
   async (value: string) => {
@@ -29,8 +32,7 @@ await configCache(set);
 await configPackageJSON(set);
 
 await envToString(env)
-  .then(verifyWriteTextFile(".env"))
-  .then();
+  .then(verifyWriteTextFile(".env"));
 
 await configMakefiles([
   ["Makefile", denoMk],

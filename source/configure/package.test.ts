@@ -1,12 +1,12 @@
 import { assertEquals } from "../../remote/asserts.ts";
 import { configureTestProcess, makeExpects, TP } from "../utils.ts";
 
-const script = "scripts/configure/package.process.ts";
+const script = "source/configure/package.process.ts";
 
 const startTestProcess = configureTestProcess(script);
 
 Deno.test("package.ts :: existing target/source, cancel", async () => {
-  async function preTest(tp: TP) {
+  async function pretest(tp: TP) {
     const sourceDir = tp.tempDir + "/source";
     const targetDir = tp.tempDir + "/target";
     const sourceFile = sourceDir + "/package.json";
@@ -22,9 +22,10 @@ Deno.test("package.ts :: existing target/source, cancel", async () => {
       targetFile,
       JSON.stringify({ name: "existing-target-name" }),
     );
+    return tp;
   }
 
-  const tp = await startTestProcess({ preTest });
+  const tp = await startTestProcess({ pretest });
   const {
     answer: an,
     expectJSON: ej,
@@ -44,7 +45,7 @@ Deno.test("package.ts :: existing target/source, cancel", async () => {
 });
 
 Deno.test("package.ts :: existing target/source, merge, default", async () => {
-  async function preTest(tp: TP) {
+  async function pretest(tp: TP) {
     const sourceDir = tp.tempDir + "/source";
     const targetDir = tp.tempDir + "/target";
     const sourceFile = sourceDir + "/package.json";
@@ -60,9 +61,10 @@ Deno.test("package.ts :: existing target/source, merge, default", async () => {
       targetFile,
       JSON.stringify({ name: "existing-target-name" }),
     );
+    return tp;
   }
 
-  const tp = await startTestProcess({ preTest });
+  const tp = await startTestProcess({ pretest });
   const {
     answer: an,
     expectJSON: ej,
@@ -88,7 +90,7 @@ Deno.test("package.ts :: existing target/source, merge, default", async () => {
 });
 
 Deno.test("package.ts :: existing files", async () => {
-  async function preTest(tp: TP) {
+  async function pretest(tp: TP) {
     const sourceDir = tp.tempDir + "/source";
     const targetDir = tp.tempDir + "/target";
     const sourceFile = sourceDir + "/package.json";
@@ -98,9 +100,10 @@ Deno.test("package.ts :: existing files", async () => {
     await Deno.mkdir(targetDir, { recursive: true });
     await Deno.writeTextFile(sourceFile, JSON.stringify({ name: "source" }));
     await Deno.writeTextFile(targetFile, JSON.stringify({ name: "target" }));
+    return tp;
   }
 
-  const tp = await startTestProcess({ preTest });
+  const tp = await startTestProcess({ pretest });
   const {
     answer: an,
     expectJSON: ej,

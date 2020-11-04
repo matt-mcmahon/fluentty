@@ -3,7 +3,7 @@ TSFILES:=$(patsubst %.mk,%.ts,$(wildcard *.mk))
 all: $(TSFILES)
 
 clean:
-	rm -rf *.ts
+	rm -rf $(TSFILES)
 
 %.ts: %.mk
 	deno run \

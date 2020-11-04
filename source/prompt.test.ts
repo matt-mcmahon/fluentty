@@ -1,9 +1,8 @@
 import { assertEquals } from "../remote/asserts.ts";
-import { forceWriteTextFile } from "./prompt.ts";
 import { checkForErrors, configureTestProcess, strip } from "./utils.ts";
 
 const startTestProcess = configureTestProcess(
-  "scripts/prompt.process.ts",
+  "source/prompt.process.ts",
 );
 
 Deno.test("makefile.ts :: no existing files", async () => {

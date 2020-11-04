@@ -1,7 +1,7 @@
-import { Set } from "../configure.ts";
+import type { SetEnv } from "../configure.ts";
 import { ask, askYesNo, defaultTo, ifYes, prompt } from "../prompt.ts";
 
-async function acceptDenoDir(set: Set) {
+async function acceptDenoDir(set: SetEnv) {
   await ask("Local Deno cache directory")
     .then(defaultTo(".deno"))
     .then(prompt)
@@ -12,7 +12,7 @@ async function acceptDenoDir(set: Set) {
     .then(set("LOCK_FILE"));
 }
 
-export async function configCache(set: Set) {
+export async function configCache(set: SetEnv) {
   await askYesNo("Enable local Deno cache")
     .then(defaultTo("yes"))
     .then(prompt)

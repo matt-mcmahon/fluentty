@@ -3,7 +3,7 @@ import { forceWriteTextFile } from "../prompt.ts";
 import { checkForErrors, configureTestProcess, strip } from "../utils.ts";
 
 const startTestProcess = configureTestProcess(
-  "scripts/configure/npm.process.ts",
+  "source/configure/npm.process.ts",
 );
 
 Deno.test("npm.ts :: use default", async () => {

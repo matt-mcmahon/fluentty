@@ -1,4 +1,4 @@
-import { Set } from "../configure.ts";
+import type { SetEnv } from "../configure.ts";
 import {
   ask,
   askYesNo,
@@ -15,11 +15,11 @@ function createEmptyImportMap(filename: string) {
   );
 }
 
-async function noImportMap(set: Set) {
+async function noImportMap(set: SetEnv) {
   await set("IMPORT_MAP")(""); // set empty string to disable
 }
 
-async function useImportMap(set: Set) {
+async function useImportMap(set: SetEnv) {
   await ask("Import-map filename")
     .then(defaultTo("import_map.json"))
     .then(prompt)
@@ -27,7 +27,7 @@ async function useImportMap(set: Set) {
     .then(createEmptyImportMap);
 }
 
-export async function configImportMap(set: Set) {
+export async function configImportMap(set: SetEnv) {
   await askYesNo("Use an import-map")
     .then(defaultTo("no"))
     .then(prompt)

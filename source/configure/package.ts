@@ -1,4 +1,4 @@
-import type { Set } from "../configure.ts";
+import type { SetEnv } from "../configure.ts";
 import {
   acceptPartial,
   ask,
@@ -79,7 +79,7 @@ const overwriteTargetFile = (targetFile: string) =>
     );
 
 export async function configPackageJSON(
-  set: Set,
+  set: SetEnv,
   { sourceDir = ".", targetDir = "platform/node" } = {},
 ) {
   const configure = await askYesNo("Automatically Configure package.json Files")
