@@ -1,1 +1,1 @@
-export * from "../../remote/describe.ts";
+export { describe } from "../../remote/describe.ts";
