@@ -12,5 +12,6 @@ clean:
 		../text-file-to-module.ts \
 		$(CURDIR)/$@ \
 		$(CURDIR)/$<
+	deno fmt .
 
 .PHONY: clean all

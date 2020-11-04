@@ -1,6 +1,11 @@
 DEVELOPMENT_FILES := $(shell find "$(PWD)/$(DENO_SOURCE_DIR)" -type f -name "*.ts")
 GEN_DIR           := $(CURDIR)/source/gen
 
+NPM_INSTALL       ?= $(NPM) install
+NPM_RUN           ?= $(NPM) run
+NPM_LINK          ?= $(NPM) link
+NPM_UNLINK        ?= $(NPM) unlink
+
 all: install test build
 
 $(GEN_DIR): $(DEVELOPMENT_FILES)
