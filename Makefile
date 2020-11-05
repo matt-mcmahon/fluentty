@@ -1,7 +1,11 @@
 # Include, then immediately export, environment variables in .env file.
 # These variables will be available to the Deno CLI.
+ifneq ($(wildcard ".env"),)
 include .env
+endif
+
 export
+
 
 # These settings can be safely disabled by setting the VARIABLE_NAME to nothing
 # in your deployment's .env file. For template, setting the following would
@@ -52,21 +56,13 @@ LOCK_OPTIONS           := --lock $(LOCK_FILE)
 LOCK_OPTIONS_WRITE     := --lock $(LOCK_FILE) --lock-write
 endif
 
-define submake
-	$(MAKE) DENO_DIR=$(DENO_DIR_ABS) -C $2 $1
-endef
-
-define MakeTemplate
-	$(MAKE) DENO_DIR=$(DENO_DIR_ABS) PWD=$(PWD)/template -C template $1
-endef
-
 define print-header
 	@echo
 	@echo $1 $(CURDIR)
 	@echo
 endef
 
-all: install lint build test-all
+all: install lint build test
 
 ifneq ($(LOCK_FILE),)
 $(LOCK_FILE): $(REMOTE_DEPENDENCIES) $(DENO_DEPENDENCIES_FILE)
@@ -87,7 +83,6 @@ endif
 
 ifneq ($(DENO_BUNDLE_FILE),)
 $(DENO_BUNDLE_FILE): $(LINT_FILES) $(REMOTE_DEPENDENCIES)
-	$(MAKE) DENO_DIR=$(DENO_DIR_ABS) -C source/makefiles build
 	@echo "// deno-fmt-ignore-file"   > $(DENO_BUNDLE_FILE)
 	@echo "// deno-lint-ignore-file" >> $(DENO_BUNDLE_FILE)
 	@echo "// @ts-nocheck"           >> $(DENO_BUNDLE_FILE)
@@ -104,17 +99,11 @@ $(DENO_DEPENDENCIES_FILE): $(REMOTE_DEPENDENCIES)
 	deno fmt $(DENO_DEPENDENCIES_FILE)
 endif
 
-build: .print-build-header build-makefiles $(DENO_BUNDLE_FILE)
+build: .print-build-header $(DENO_BUNDLE_FILE)
 	$(call MakeTemplate, install build)
-
-build-makefiles:
-	$(call submake,build,source/makefiles)
 
 clean: .print-clean-header
 	rm -f $(DENO_BUNDLE_FILE)
-	$(call submake,$@,source/makefiles)
-	$(call MakeTemplate, $@)
-
 configure:
 	./configure
 
@@ -122,8 +111,6 @@ fmt: format
 
 format:
 	deno fmt $(DENO_SOURCE_DIR)
-	$(call submake,$@,source/makefiles)
-	$(call MakeTemplate, $@)
 
 install: .print-install-header $(LOCK_FILE)
 
@@ -145,11 +132,6 @@ test: .print-test-header $(LOCK_FILE)
 		$(USE_CACHE) \
 		$(IMPORT_MAP_OPTIONS) \
 		$(DENO_SOURCE_DIR)
-
-test-all: .print-test-header test-coverage
-	$(call submake,test,source/makefiles)
-	$(call submake,test,template)
-
 
 test-coverage: .print-test-header $(LOCK_FILE)
 	deno test --unstable --coverage \

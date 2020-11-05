@@ -1,7 +1,12 @@
 import { AssertFunction } from "../remote/asserts.ts";
 import { stripColor } from "../remote/colors.ts";
-import type { SetEnv } from "./configure.ts";
-import { getOutput, sendInput } from "./prompt.ts";
+import { getOutput, sendInput } from "./promptly.ts";
+
+export const tap = <A>(fn: (a: A) => void) =>
+  (a: A): A => {
+    fn(a);
+    return a;
+  };
 
 export type JSONData = ReturnType<typeof JSON.parse>;
 
@@ -89,23 +94,6 @@ export function configureTestProcess(script: string) {
 
     return tp;
   };
-}
-
-export function makeSetter(): [
-  () => Record<string, string>,
-  SetEnv,
-] {
-  const actual: Record<string, string> = {};
-
-  const set: SetEnv = (key: string) =>
-    async (value: Promise<string> | string) => {
-      actual[key] = await value;
-      return value;
-    };
-
-  const get = () => actual;
-
-  return [get, set];
 }
 
 export function makeExpects(tp: TP, assertEquals: AssertFunction) {

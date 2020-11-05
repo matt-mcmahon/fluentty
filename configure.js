@@ -13,33 +13,10 @@ function code(open, close) {
 function run(str, code1) {
     return enabled ? `${code1.open}${str.replace(code1.regexp, code1.open)}${code1.close}` : str;
 }
-function bold(str) {
-    return run(str, code([
-        1
-    ], 22));
-}
 function dim(str) {
     return run(str, code([
         2
     ], 22));
-}
-function red(str) {
-    return run(str, code([
-        31
-    ], 39));
-}
-function green(str) {
-    return run(str, code([
-        32
-    ], 39));
-}
-function white(str) {
-    return run(str, code([
-        37
-    ], 39));
-}
-function gray(str) {
-    return brightBlack(str);
 }
 function brightBlack(str) {
     return run(str, code([
@@ -58,533 +35,10 @@ const ANSI_PATTERN = new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
     "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))", 
 ].join("|"), "g");
-function stripColor(string) {
+function stripColor2(string) {
     return string.replace(ANSI_PATTERN, "");
 }
-function isSubdir(src, dest, sep1 = sep) {
-    if (src === dest) {
-        return false;
-    }
-    const srcArray = src.split(sep1);
-    const destArray = dest.split(sep1);
-    return srcArray.every((current, i)=>destArray[i] === current
-    );
-}
-function getFileInfoType(fileInfo) {
-    return fileInfo.isFile ? "file" : fileInfo.isDirectory ? "dir" : fileInfo.isSymlink ? "symlink" : undefined;
-}
-async function ensureDir(dir) {
-    try {
-        const fileInfo = await Deno.lstat(dir);
-        if (!fileInfo.isDirectory) {
-            throw new Error(`Ensure path exists, expected 'dir', got '${getFileInfoType(fileInfo)}'`);
-        }
-    } catch (err) {
-        if (err instanceof Deno.errors.NotFound) {
-            await Deno.mkdir(dir, {
-                recursive: true
-            });
-            return;
-        }
-        throw err;
-    }
-}
-function ensureDirSync(dir) {
-    try {
-        const fileInfo = Deno.lstatSync(dir);
-        if (!fileInfo.isDirectory) {
-            throw new Error(`Ensure path exists, expected 'dir', got '${getFileInfoType(fileInfo)}'`);
-        }
-    } catch (err) {
-        if (err instanceof Deno.errors.NotFound) {
-            Deno.mkdirSync(dir, {
-                recursive: true
-            });
-            return;
-        }
-        throw err;
-    }
-}
-async function exists1(filePath) {
-    try {
-        await Deno.lstat(filePath);
-        return true;
-    } catch (err) {
-        if (err instanceof Deno.errors.NotFound) {
-            return false;
-        }
-        throw err;
-    }
-}
-function existsSync(filePath) {
-    try {
-        Deno.lstatSync(filePath);
-        return true;
-    } catch (err) {
-        if (err instanceof Deno.errors.NotFound) {
-            return false;
-        }
-        throw err;
-    }
-}
-function assert(expr, msg = "") {
-    if (!expr) {
-        throw new DenoStdInternalError(msg);
-    }
-}
-function _createWalkEntrySync(path) {
-    path = normalize(path);
-    const name = basename(path);
-    const info = Deno.statSync(path);
-    return {
-        path,
-        name,
-        isFile: info.isFile,
-        isDirectory: info.isDirectory,
-        isSymlink: info.isSymlink
-    };
-}
-async function _createWalkEntry(path) {
-    path = normalize(path);
-    const name = basename(path);
-    const info = await Deno.stat(path);
-    return {
-        path,
-        name,
-        isFile: info.isFile,
-        isDirectory: info.isDirectory,
-        isSymlink: info.isSymlink
-    };
-}
-function include(path, exts, match, skip) {
-    if (exts && !exts.some((ext)=>path.endsWith(ext)
-    )) {
-        return false;
-    }
-    if (match && !match.some((pattern)=>!!path.match(pattern)
-    )) {
-        return false;
-    }
-    if (skip && skip.some((pattern)=>!!path.match(pattern)
-    )) {
-        return false;
-    }
-    return true;
-}
-async function* walk(root, { maxDepth =Infinity , includeFiles =true , includeDirs =true , followSymlinks =false , exts =undefined , match =undefined , skip =undefined  } = {
-}) {
-    if (maxDepth < 0) {
-        return;
-    }
-    if (includeDirs && include(root, exts, match, skip)) {
-        yield await _createWalkEntry(root);
-    }
-    if (maxDepth < 1 || !include(root, undefined, undefined, skip)) {
-        return;
-    }
-    for await (const entry of Deno.readDir(root)){
-        if (entry.isSymlink) {
-            if (followSymlinks) {
-                throw new Error("unimplemented");
-            } else {
-                continue;
-            }
-        }
-        assert(entry.name != null);
-        const path = join(root, entry.name);
-        if (entry.isFile) {
-            if (includeFiles && include(path, exts, match, skip)) {
-                yield {
-                    path,
-                    ...entry
-                };
-            }
-        } else {
-            yield* walk(path, {
-                maxDepth: maxDepth - 1,
-                includeFiles,
-                includeDirs,
-                followSymlinks,
-                exts,
-                match,
-                skip
-            });
-        }
-    }
-}
-function* walkSync(root, { maxDepth =Infinity , includeFiles =true , includeDirs =true , followSymlinks =false , exts =undefined , match =undefined , skip =undefined  } = {
-}) {
-    if (maxDepth < 0) {
-        return;
-    }
-    if (includeDirs && include(root, exts, match, skip)) {
-        yield _createWalkEntrySync(root);
-    }
-    if (maxDepth < 1 || !include(root, undefined, undefined, skip)) {
-        return;
-    }
-    for (const entry of Deno.readDirSync(root)){
-        if (entry.isSymlink) {
-            if (followSymlinks) {
-                throw new Error("unimplemented");
-            } else {
-                continue;
-            }
-        }
-        assert(entry.name != null);
-        const path = join(root, entry.name);
-        if (entry.isFile) {
-            if (includeFiles && include(path, exts, match, skip)) {
-                yield {
-                    path,
-                    ...entry
-                };
-            }
-        } else {
-            yield* walkSync(path, {
-                maxDepth: maxDepth - 1,
-                includeFiles,
-                includeDirs,
-                followSymlinks,
-                exts,
-                match,
-                skip
-            });
-        }
-    }
-}
-const isWindows = Deno.build.os == "windows";
-function split(path) {
-    const s = SEP_PATTERN.source;
-    const segments = path.replace(new RegExp(`^${s}|${s}$`, "g"), "").split(SEP_PATTERN);
-    const isAbsolute_ = isAbsolute(path);
-    return {
-        segments,
-        isAbsolute: isAbsolute_,
-        hasTrailingSep: !!path.match(new RegExp(`${s}$`)),
-        winRoot: isWindows && isAbsolute_ ? segments.shift() : undefined
-    };
-}
-function throwUnlessNotFound(error) {
-    if (!(error instanceof Deno.errors.NotFound)) {
-        throw error;
-    }
-}
-function comparePath(a, b) {
-    if (a.path < b.path) return -1;
-    if (a.path > b.path) return 1;
-    return 0;
-}
-const isWindows1 = Deno.build.os === "windows";
-async function ensureValidCopy(src, dest, options, isCopyFolder = false) {
-    let destStat;
-    try {
-        destStat = await Deno.lstat(dest);
-    } catch (err) {
-        if (err instanceof Deno.errors.NotFound) {
-            return;
-        }
-        throw err;
-    }
-    if (isCopyFolder && !destStat.isDirectory) {
-        throw new Error(`Cannot overwrite non-directory '${dest}' with directory '${src}'.`);
-    }
-    if (!options.overwrite) {
-        throw new Error(`'${dest}' already exists.`);
-    }
-    return destStat;
-}
-function ensureValidCopySync(src, dest, options, isCopyFolder = false) {
-    let destStat;
-    try {
-        destStat = Deno.lstatSync(dest);
-    } catch (err) {
-        if (err instanceof Deno.errors.NotFound) {
-            return;
-        }
-        throw err;
-    }
-    if (isCopyFolder && !destStat.isDirectory) {
-        throw new Error(`Cannot overwrite non-directory '${dest}' with directory '${src}'.`);
-    }
-    if (!options.overwrite) {
-        throw new Error(`'${dest}' already exists.`);
-    }
-    return destStat;
-}
-async function copyFile(src, dest, options) {
-    await ensureValidCopy(src, dest, options);
-    await Deno.copyFile(src, dest);
-    if (options.preserveTimestamps) {
-        const statInfo = await Deno.stat(src);
-        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
-        await Deno.utime(dest, statInfo.atime, statInfo.mtime);
-    }
-}
-function copyFileSync(src, dest, options) {
-    ensureValidCopySync(src, dest, options);
-    Deno.copyFileSync(src, dest);
-    if (options.preserveTimestamps) {
-        const statInfo = Deno.statSync(src);
-        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
-        Deno.utimeSync(dest, statInfo.atime, statInfo.mtime);
-    }
-}
-async function copySymLink(src, dest, options) {
-    await ensureValidCopy(src, dest, options);
-    const originSrcFilePath = await Deno.readLink(src);
-    const type = getFileInfoType(await Deno.lstat(src));
-    if (isWindows1) {
-        await Deno.symlink(originSrcFilePath, dest, {
-            type: type === "dir" ? "dir" : "file"
-        });
-    } else {
-        await Deno.symlink(originSrcFilePath, dest);
-    }
-    if (options.preserveTimestamps) {
-        const statInfo = await Deno.lstat(src);
-        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
-        await Deno.utime(dest, statInfo.atime, statInfo.mtime);
-    }
-}
-function copySymlinkSync(src, dest, options) {
-    ensureValidCopySync(src, dest, options);
-    const originSrcFilePath = Deno.readLinkSync(src);
-    const type = getFileInfoType(Deno.lstatSync(src));
-    if (isWindows1) {
-        Deno.symlinkSync(originSrcFilePath, dest, {
-            type: type === "dir" ? "dir" : "file"
-        });
-    } else {
-        Deno.symlinkSync(originSrcFilePath, dest);
-    }
-    if (options.preserveTimestamps) {
-        const statInfo = Deno.lstatSync(src);
-        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
-        Deno.utimeSync(dest, statInfo.atime, statInfo.mtime);
-    }
-}
-async function copyDir(src, dest, options) {
-    const destStat = await ensureValidCopy(src, dest, options, true);
-    if (!destStat) {
-        await ensureDir(dest);
-    }
-    if (options.preserveTimestamps) {
-        const srcStatInfo = await Deno.stat(src);
-        assert(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
-        await Deno.utime(dest, srcStatInfo.atime, srcStatInfo.mtime);
-    }
-    for await (const entry of Deno.readDir(src)){
-        const srcPath = join(src, entry.name);
-        const destPath = join(dest, basename(srcPath));
-        if (entry.isSymlink) {
-            await copySymLink(srcPath, destPath, options);
-        } else if (entry.isDirectory) {
-            await copyDir(srcPath, destPath, options);
-        } else if (entry.isFile) {
-            await copyFile(srcPath, destPath, options);
-        }
-    }
-}
-function copyDirSync(src, dest, options) {
-    const destStat = ensureValidCopySync(src, dest, options, true);
-    if (!destStat) {
-        ensureDirSync(dest);
-    }
-    if (options.preserveTimestamps) {
-        const srcStatInfo = Deno.statSync(src);
-        assert(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
-        assert(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
-        Deno.utimeSync(dest, srcStatInfo.atime, srcStatInfo.mtime);
-    }
-    for (const entry of Deno.readDirSync(src)){
-        assert(entry.name != null, "file.name must be set");
-        const srcPath = join(src, entry.name);
-        const destPath = join(dest, basename(srcPath));
-        if (entry.isSymlink) {
-            copySymlinkSync(srcPath, destPath, options);
-        } else if (entry.isDirectory) {
-            copyDirSync(srcPath, destPath, options);
-        } else if (entry.isFile) {
-            copyFileSync(srcPath, destPath, options);
-        }
-    }
-}
-var EOL;
-(function(EOL1) {
-    EOL1["LF"] = "\n";
-    EOL1["CRLF"] = "\r\n";
-})(EOL || (EOL = {
-}));
-function accept(...accept1) {
-    return async (options)=>{
-        const { accept: current = [] , ...rest } = options;
-        const set = new Set([
-            ...current,
-            ...accept1
-        ]);
-        return {
-            ...rest,
-            accept: [
-                ...set
-            ]
-        };
-    };
-}
-function acceptPartial(...accepts) {
-    return (options)=>accept(...accepts)(options).then(sanitize((input, options1)=>{
-            if (input.length === 0) return input;
-            if (input === options1.defaultTo) return input;
-            const maybe = options1.accept.reduce((maybe1, accepts1)=>accepts1.startsWith(input) ? [
-                    ...maybe1,
-                    accepts1
-                ] : maybe1
-            , []);
-            return maybe.length === 1 ? maybe[0] : input;
-        }))
-    ;
-}
-function ask(message) {
-    return Promise.resolve({
-        message,
-        accept: []
-    });
-}
-function askYesNo(message) {
-    return ask(message).then(acceptPartial("yes", "no")).then(retry());
-}
-async function done() {
-}
-function forceWriteTextFile(filename, data) {
-    return Deno.writeTextFile(filename, data);
-}
-function ifYes(action) {
-    return async (input)=>{
-        if (input === "yes" || input === true) await action();
-        return input;
-    };
-}
-function ifNo(action) {
-    return async (input)=>{
-        if (input === "no" || input === false) await action();
-        return input;
-    };
-}
-async function prompt(options) {
-    return stdout(`${options.message}: ${getHint(options)}`).then(stdin).then(orDefault(options)).then(orSanitize(options)).then(orAccept(options)).then(orValidate(options)).then(orFormat(options)).catch(orRetry(options));
-}
-function retry(value = true) {
-    return async (options)=>set("retry")(value)(options)
-    ;
-}
-function stdout(message) {
-    return Deno.stdout.write(new TextEncoder().encode(message));
-}
-async function stdin(accept1 = 1024) {
-    const max = 1024;
-    const buf = new Uint8Array(accept1 > 1024 ? accept1 : 1024);
-    const got = await Deno.stdin.read(buf);
-    return new TextDecoder().decode(buf.subarray(0, accept1 < got ? accept1 : got)).trim();
-}
-function verifyWriteTextFile(filename) {
-    return async (data)=>{
-        const justCreate = ()=>Deno.writeTextFile(filename, data)
-        ;
-        const askOverwrite = async ()=>ask(`File ${filename} exists, overwrite`).then(acceptPartial("yes", "no")).then(defaultTo("no")).then(prompt).then(ifYes(justCreate)).then(done)
-        ;
-        await exists(filename).then(ifNo(justCreate)).then(ifYes(askOverwrite));
-    };
-}
-function orRetry(options) {
-    return (...reason)=>{
-        console.error(...reason);
-        return options.retry ? prompt(options) : Promise.reject(reason);
-    };
-}
-function orAccept({ accept: accept1 , defaultTo  }) {
-    return async (input)=>accept1.length === 0 ? input : accept1.includes(input) || input === defaultTo ? input : Promise.reject(new TypeError(`input ${input} is not default, ${defaultTo}, or in accept list [${accept1.map((s)=>`"${s}"`
-        ).join(", ")}]`))
-    ;
-}
-function orDefault(options) {
-    return async (input)=>input === "" && options.defaultTo != null ? options.defaultTo : input === "" && options.defaultTo == null ? Promise.reject(new TypeError(`no input, no default value`)) : input
-    ;
-}
-function orFormat(options) {
-    return async (input)=>typeof options.format === "function" ? options.format(input, options) : input
-    ;
-}
-function orSanitize(options) {
-    return async (input)=>typeof options.sanitize === "function" ? options.sanitize(input, options) : input
-    ;
-}
-function orValidate(options) {
-    return async (input)=>{
-        if (typeof options.validate === "function") {
-            return options.validate(input, options) ? input : Promise.reject(new TypeError(`input ${input} failed to validate`));
-        }
-        return input;
-    };
-}
-function set(key) {
-    return (value)=>async (options)=>({
-                ...options,
-                [key]: value
-            })
-    ;
-}
-function getHint({ accept: accept1 , defaultTo  }) {
-    const set1 = new Set(accept1);
-    if (defaultTo) set1.add(defaultTo);
-    const as = Array.from(set1).map((s)=>s === defaultTo ? brightWhite(s) : dim(s)
-    );
-    const hint = as.length > 2 ? dim("(") + as.join(dim(", ")) + dim(") ") : as.length > 0 ? dim("(") + as.join(dim("/")) + dim(") ") : "";
-    return hint;
-}
-const defaultTo = set("defaultTo");
-const sanitize = set("sanitize");
-async function acceptDenoDir(set1) {
-    await ask("Local Deno cache directory").then(defaultTo(".deno")).then(prompt).then(set1("DENO_DIR")).then(()=>ask("Lock-File Name")
-    ).then(defaultTo("lock_file.json")).then(prompt).then(set1("LOCK_FILE"));
-}
-async function configCache(set1) {
-    await askYesNo("Enable local Deno cache").then(defaultTo("yes")).then(prompt).then(ifYes(()=>acceptDenoDir(set1)
-    ));
-}
-function createEmptyImportMap(filename) {
-    return verifyWriteTextFile(filename)(JSON.stringify({
-        imports: {
-        }
-    }, null, "\t"));
-}
-async function noImportMap(set1) {
-    await set1("IMPORT_MAP")("");
-}
-async function useImportMap(set1) {
-    await ask("Import-map filename").then(defaultTo("import_map.json")).then(prompt).then(set1("IMPORT_MAP")).then(createEmptyImportMap);
-}
-async function configImportMap(set1) {
-    await askYesNo("Use an import-map").then(defaultTo("no")).then(prompt).then(ifNo(()=>noImportMap(set1)
-    )).then(ifYes(()=>useImportMap(set1)
-    ));
-}
-const writeFiles = (pairs)=>async ()=>{
-        for (const pair of pairs){
-            const [filePath, fileData] = pair;
-            await verifyWriteTextFile(filePath)(fileData);
-        }
-    }
-;
-async function configMakefiles(pairs) {
-    return askYesNo("Create Makefiles").then(defaultTo("yes")).then(prompt).then(ifYes(writeFiles(pairs))).then(done);
-}
-const configNPM = (set1)=>ask("NPM executable").then(accept("npm", "pnpm", "yarn")).then(defaultTo("npm")).then(retry()).then(prompt).then(set1("NPM"))
-;
+const stripColor1 = stripColor2;
 const regExpEscapeChars = [
     "!",
     "$",
@@ -838,7 +292,7 @@ function normalizeGlob(glob, { globstar =false  } = {
     if (!globstar) {
         return normalize(glob);
     }
-    const s = SEP_PATTERN.source;
+    const s = SEP_PATTERN1.source;
     const badParentPattern = new RegExp(`(?<=(${s}|^)\\*\\*${s})\\.\\.(?=${s}|$)`, "g");
     return normalize(glob.replace(badParentPattern, "\u{0}")).replace(/\0/g, "..");
 }
@@ -869,7 +323,12 @@ if (globalThis.Deno != null) {
 } else if (navigator?.appVersion?.includes?.("Win") ?? false) {
     NATIVE_OS = "windows";
 }
-const isWindows2 = NATIVE_OS == "windows";
+const isWindows = NATIVE_OS == "windows";
+function assert(expr, msg = "") {
+    if (!expr) {
+        throw new DenoStdInternalError(msg);
+    }
+}
 const _win32 = function() {
     const sep = "\\";
     const delimiter = ";";
@@ -1915,431 +1374,535 @@ const _posix = function() {
         toFileUrl
     };
 }();
-const path = isWindows2 ? _win32 : _posix;
+const path = isWindows ? _win32 : _posix;
 const { basename , delimiter , dirname , extname , format , fromFileUrl , isAbsolute , join , normalize , parse , relative , resolve , sep , toFileUrl , toNamespacedPath ,  } = path;
-const SEP = isWindows2 ? "\\" : "/";
-const SEP_PATTERN = isWindows2 ? /[\\/]+/ : /\/+/;
-var DiffType;
-(function(DiffType1) {
-    DiffType1["removed"] = "removed";
-    DiffType1["common"] = "common";
-    DiffType1["added"] = "added";
-})(DiffType || (DiffType = {
-}));
-function createCommon(A, B, reverse) {
-    const common = [];
-    if (A.length === 0 || B.length === 0) return [];
-    for(let i = 0; i < Math.min(A.length, B.length); i += 1){
-        if (A[reverse ? A.length - i - 1 : i] === B[reverse ? B.length - i - 1 : i]) {
-            common.push(A[reverse ? A.length - i - 1 : i]);
-        } else {
-            return common;
-        }
+const SEP = isWindows ? "\\" : "/";
+const SEP_PATTERN1 = isWindows ? /[\\/]+/ : /\/+/;
+function isSubdir(src, dest, sep1 = sep) {
+    if (src === dest) {
+        return false;
     }
-    return common;
-}
-function diff(A, B) {
-    const prefixCommon = createCommon(A, B);
-    const suffixCommon = createCommon(A.slice(prefixCommon.length), B.slice(prefixCommon.length), true).reverse();
-    A = suffixCommon.length ? A.slice(prefixCommon.length, -suffixCommon.length) : A.slice(prefixCommon.length);
-    B = suffixCommon.length ? B.slice(prefixCommon.length, -suffixCommon.length) : B.slice(prefixCommon.length);
-    const swapped = B.length > A.length;
-    [A, B] = swapped ? [
-        B,
-        A
-    ] : [
-        A,
-        B
-    ];
-    const M = A.length;
-    const N = B.length;
-    if (!M && !N && !suffixCommon.length && !prefixCommon.length) return [];
-    if (!N) {
-        return [
-            ...prefixCommon.map((c)=>({
-                    type: DiffType.common,
-                    value: c
-                })
-            ),
-            ...A.map((a)=>({
-                    type: swapped ? DiffType.added : DiffType.removed,
-                    value: a
-                })
-            ),
-            ...suffixCommon.map((c)=>({
-                    type: DiffType.common,
-                    value: c
-                })
-            ), 
-        ];
-    }
-    const offset = N;
-    const delta = M - N;
-    const size = M + N + 1;
-    const fp = new Array(size).fill({
-        y: -1
-    });
-    const routes = new Uint32Array((M * N + size + 1) * 2);
-    const diffTypesPtrOffset = routes.length / 2;
-    let ptr = 0;
-    let p = -1;
-    function backTrace(A1, B1, current, swapped1) {
-        const M1 = A1.length;
-        const N1 = B1.length;
-        const result = [];
-        let a = M1 - 1;
-        let b = N1 - 1;
-        let j = routes[current.id];
-        let type = routes[current.id + diffTypesPtrOffset];
-        while(true){
-            if (!j && !type) break;
-            const prev = j;
-            if (type === 1) {
-                result.unshift({
-                    type: swapped1 ? DiffType.removed : DiffType.added,
-                    value: B1[b]
-                });
-                b -= 1;
-            } else if (type === 3) {
-                result.unshift({
-                    type: swapped1 ? DiffType.added : DiffType.removed,
-                    value: A1[a]
-                });
-                a -= 1;
-            } else {
-                result.unshift({
-                    type: DiffType.common,
-                    value: A1[a]
-                });
-                a -= 1;
-                b -= 1;
-            }
-            j = routes[j];
-            type = routes[j + diffTypesPtrOffset];
-        }
-        return result;
-    }
-    function createFP(slide, down, k, M1) {
-        if (slide && slide.y === -1 && down && down.y === -1) {
-            return {
-                y: 0,
-                id: 0
-            };
-        }
-        if (down && down.y === -1 || k === M1 || (slide && slide.y) > (down && down.y) + 1) {
-            const prev = slide.id;
-            ptr++;
-            routes[ptr] = prev;
-            routes[ptr + diffTypesPtrOffset] = 3;
-            return {
-                y: slide.y,
-                id: ptr
-            };
-        } else {
-            const prev = down.id;
-            ptr++;
-            routes[ptr] = prev;
-            routes[ptr + diffTypesPtrOffset] = 1;
-            return {
-                y: down.y + 1,
-                id: ptr
-            };
-        }
-    }
-    function snake(k, slide, down, _offset, A1, B1) {
-        const M1 = A1.length;
-        const N1 = B1.length;
-        if (k < -N1 || M1 < k) return {
-            y: -1,
-            id: -1
-        };
-        const fp1 = createFP(slide, down, k, M1);
-        while(fp1.y + k < M1 && fp1.y < N1 && A1[fp1.y + k] === B1[fp1.y]){
-            const prev = fp1.id;
-            ptr++;
-            fp1.id = ptr;
-            fp1.y += 1;
-            routes[ptr] = prev;
-            routes[ptr + diffTypesPtrOffset] = 2;
-        }
-        return fp1;
-    }
-    while(fp[delta + N].y < N){
-        p = p + 1;
-        for(let k = -p; k < delta; ++k){
-            fp[k + offset] = snake(k, fp[k - 1 + N], fp[k + 1 + N], N, A, B);
-        }
-        for(let k1 = delta + p; k1 > delta; --k1){
-            fp[k1 + offset] = snake(k1, fp[k1 - 1 + N], fp[k1 + 1 + N], N, A, B);
-        }
-        fp[delta + offset] = snake(delta, fp[delta - 1 + N], fp[delta + 1 + N], N, A, B);
-    }
-    return [
-        ...prefixCommon.map((c)=>({
-                type: DiffType.common,
-                value: c
-            })
-        ),
-        ...backTrace(A, B, fp[delta + N], swapped),
-        ...suffixCommon.map((c)=>({
-                type: DiffType.common,
-                value: c
-            })
-        ), 
-    ];
-}
-function _format1(v) {
-    return globalThis.Deno ? Deno.inspect(v, {
-        depth: Infinity,
-        sorted: true,
-        trailingComma: true,
-        compact: false,
-        iterableLimit: Infinity
-    }) : `"${String(v).replace(/(?=["\\])/g, "\\")}"`;
-}
-function createColor(diffType) {
-    switch(diffType){
-        case DiffType.added:
-            return (s)=>green(bold(s))
-            ;
-        case DiffType.removed:
-            return (s)=>red(bold(s))
-            ;
-        default:
-            return white;
-    }
-}
-function createSign(diffType) {
-    switch(diffType){
-        case DiffType.added:
-            return "+   ";
-        case DiffType.removed:
-            return "-   ";
-        default:
-            return "    ";
-    }
-}
-function buildMessage(diffResult) {
-    const messages = [];
-    messages.push("");
-    messages.push("");
-    messages.push(`    ${gray(bold("[Diff]"))} ${red(bold("Actual"))} / ${green(bold("Expected"))}`);
-    messages.push("");
-    messages.push("");
-    diffResult.forEach((result)=>{
-        const c = createColor(result.type);
-        messages.push(c(`${createSign(result.type)}${result.value}`));
-    });
-    messages.push("");
-    return messages;
-}
-function isKeyedCollection(x) {
-    return [
-        Symbol.iterator,
-        "size"
-    ].every((k)=>k in x
+    const srcArray = src.split(sep1);
+    const destArray = dest.split(sep1);
+    return srcArray.every((current, i)=>destArray[i] === current
     );
 }
-function equal(c, d) {
-    const seen = new Map();
-    return (function compare(a, b) {
-        if (a && b && (a instanceof RegExp && b instanceof RegExp || a instanceof URL && b instanceof URL)) {
-            return String(a) === String(b);
-        }
-        if (a instanceof Date && b instanceof Date) {
-            const aTime = a.getTime();
-            const bTime = b.getTime();
-            if (Number.isNaN(aTime) && Number.isNaN(bTime)) {
-                return true;
-            }
-            return a.getTime() === b.getTime();
-        }
-        if (Object.is(a, b)) {
-            return true;
-        }
-        if (a && typeof a === "object" && b && typeof b === "object") {
-            if (seen.get(a) === b) {
-                return true;
-            }
-            if (Object.keys(a || {
-            }).length !== Object.keys(b || {
-            }).length) {
-                return false;
-            }
-            if (isKeyedCollection(a) && isKeyedCollection(b)) {
-                if (a.size !== b.size) {
-                    return false;
-                }
-                let unmatchedEntries = a.size;
-                for (const [aKey, aValue] of a.entries()){
-                    for (const [bKey, bValue] of b.entries()){
-                        if (aKey === aValue && bKey === bValue && compare(aKey, bKey) || compare(aKey, bKey) && compare(aValue, bValue)) {
-                            unmatchedEntries--;
-                        }
-                    }
-                }
-                return unmatchedEntries === 0;
-            }
-            const merged = {
-                ...a,
-                ...b
-            };
-            for(const key in merged){
-                if (!compare(a && a[key], b && b[key])) {
-                    return false;
-                }
-            }
-            seen.set(a, b);
-            return true;
-        }
-        return false;
-    })(c, d);
+function getFileInfoType(fileInfo) {
+    return fileInfo.isFile ? "file" : fileInfo.isDirectory ? "dir" : fileInfo.isSymlink ? "symlink" : undefined;
 }
-function assert1(expr, msg = "") {
-    if (!expr) {
-        throw new AssertionError(msg);
+async function ensureDir(dir) {
+    try {
+        const fileInfo = await Deno.lstat(dir);
+        if (!fileInfo.isDirectory) {
+            throw new Error(`Ensure path exists, expected 'dir', got '${getFileInfoType(fileInfo)}'`);
+        }
+    } catch (err) {
+        if (err instanceof Deno.errors.NotFound) {
+            await Deno.mkdir(dir, {
+                recursive: true
+            });
+            return;
+        }
+        throw err;
     }
 }
-function assertEquals(actual, expected, msg) {
-    if (equal(actual, expected)) {
+function ensureDirSync(dir) {
+    try {
+        const fileInfo = Deno.lstatSync(dir);
+        if (!fileInfo.isDirectory) {
+            throw new Error(`Ensure path exists, expected 'dir', got '${getFileInfoType(fileInfo)}'`);
+        }
+    } catch (err) {
+        if (err instanceof Deno.errors.NotFound) {
+            Deno.mkdirSync(dir, {
+                recursive: true
+            });
+            return;
+        }
+        throw err;
+    }
+}
+async function exists1(filePath) {
+    try {
+        await Deno.lstat(filePath);
+        return true;
+    } catch (err) {
+        if (err instanceof Deno.errors.NotFound) {
+            return false;
+        }
+        throw err;
+    }
+}
+function existsSync(filePath) {
+    try {
+        Deno.lstatSync(filePath);
+        return true;
+    } catch (err) {
+        if (err instanceof Deno.errors.NotFound) {
+            return false;
+        }
+        throw err;
+    }
+}
+function _createWalkEntrySync(path1) {
+    path1 = normalize(path1);
+    const name = basename(path1);
+    const info = Deno.statSync(path1);
+    return {
+        path: path1,
+        name,
+        isFile: info.isFile,
+        isDirectory: info.isDirectory,
+        isSymlink: info.isSymlink
+    };
+}
+async function _createWalkEntry(path1) {
+    path1 = normalize(path1);
+    const name = basename(path1);
+    const info = await Deno.stat(path1);
+    return {
+        path: path1,
+        name,
+        isFile: info.isFile,
+        isDirectory: info.isDirectory,
+        isSymlink: info.isSymlink
+    };
+}
+function include(path1, exts, match, skip) {
+    if (exts && !exts.some((ext)=>path1.endsWith(ext)
+    )) {
+        return false;
+    }
+    if (match && !match.some((pattern)=>!!path1.match(pattern)
+    )) {
+        return false;
+    }
+    if (skip && skip.some((pattern)=>!!path1.match(pattern)
+    )) {
+        return false;
+    }
+    return true;
+}
+async function* walk(root, { maxDepth =Infinity , includeFiles =true , includeDirs =true , followSymlinks =false , exts =undefined , match =undefined , skip =undefined  } = {
+}) {
+    if (maxDepth < 0) {
         return;
     }
-    let message = "";
-    const actualString = _format1(actual);
-    const expectedString = _format1(expected);
-    try {
-        const diffResult = diff(actualString.split("\n"), expectedString.split("\n"));
-        const diffMsg = buildMessage(diffResult).join("\n");
-        message = `Values are not equal:\n${diffMsg}`;
-    } catch (e) {
-        message = `\n${red("[Cannot display]")} + \n\n`;
+    if (includeDirs && include(root, exts, match, skip)) {
+        yield await _createWalkEntry(root);
     }
-    if (msg) {
-        message = msg;
+    if (maxDepth < 1 || !include(root, undefined, undefined, skip)) {
+        return;
     }
-    throw new AssertionError(message);
+    for await (const entry of Deno.readDir(root)){
+        if (entry.isSymlink) {
+            if (followSymlinks) {
+                throw new Error("unimplemented");
+            } else {
+                continue;
+            }
+        }
+        assert(entry.name != null);
+        const path1 = join(root, entry.name);
+        if (entry.isFile) {
+            if (includeFiles && include(path1, exts, match, skip)) {
+                yield {
+                    path: path1,
+                    ...entry
+                };
+            }
+        } else {
+            yield* walk(path1, {
+                maxDepth: maxDepth - 1,
+                includeFiles,
+                includeDirs,
+                followSymlinks,
+                exts,
+                match,
+                skip
+            });
+        }
+    }
 }
-const commonJSON = {
-    type: "commonjs",
-    main: "./build/index.js",
-    types: "./build/index.d.ts",
-    scripts: {
-        build: "tsc",
-        "build-development": "tsc",
-        "build-production": "tsc -p tsconfig.production.json",
-        prepack: "cat .gitignore .npmignore-additions > .npmignore",
-        test: "tap ./test-build/**/*.test.js"
-    },
-    devDependencies: {
-        "@types/node": "^14.11.4",
-        typescript: "^4.0.3"
-    }
-};
-const readFile = (filePath)=>Deno.readTextFile(filePath)
-;
-const parseJSON = async (data)=>JSON.parse(data)
-;
-const initNPM = async (cwd)=>{
-    const p = Deno.run({
-        cmd: [
-            "npm",
-            "init",
-            "-y"
-        ],
-        cwd,
-        stdout: "null"
-    });
-    await p.status();
-    p.close();
-    return join(cwd, "package.json");
-};
-const setRepositoryDirectory = (directory)=>(json)=>{
-        if (json.repository) json.repository.directory = directory;
-        return json;
-    }
-;
-const verifyPrivate = (json)=>askYesNo("Is this a private repository").then(defaultTo(json.private ? "yes" : "no")).then(prompt).then((isPrivate)=>({
-            ...json,
-            ...{
-                private: isPrivate === "yes"
-            }
-        })
-    )
-;
-const verifyName = (json)=>ask("Repository name").then(defaultTo(json.name)).then(prompt).then((name)=>({
-            ...json,
-            ...{
-                name
-            }
-        })
-    )
-;
-const verifyVersion = (json)=>ask("Repository version").then(defaultTo(json.version)).then(prompt).then((version)=>({
-            ...json,
-            ...{
-                version
-            }
-        })
-    )
-;
-const overwriteTargetFile = (targetFile)=>exists(targetFile).then((exists2)=>exists2 ? ask(`${targetFile} file exists`).then(acceptPartial("overwrite", "merge", "cancel")).then(defaultTo("merge")).then(retry()).then(prompt) : "overwrite"
-    )
-;
-async function configPackageJSON(set1, { sourceDir ="." , targetDir ="platform/node"  } = {
+function* walkSync(root, { maxDepth =Infinity , includeFiles =true , includeDirs =true , followSymlinks =false , exts =undefined , match =undefined , skip =undefined  } = {
 }) {
-    const configure = await askYesNo("Automatically Configure package.json Files").then(defaultTo("yes")).then(prompt).then((yes)=>yes === "yes"
-    );
-    if (!configure) return;
-    const sourceFile = sourceDir + "/package.json";
-    const targetFile = targetDir + "/package.json";
-    assert1(exists(sourceDir), `ERROR: source dir, ${sourceDir}, does not exist`);
-    assert1(exists(targetDir), `ERROR: target dir, ${sourceDir}, does not exist`);
-    const overwrite = await overwriteTargetFile(targetFile);
-    if (overwrite === "cancel") return;
-    const existingJSON = overwrite === "merge" ? await Deno.readTextFile(targetFile).then(parseJSON).catch(()=>({
-        })
-    ) : {
-    };
-    const newJSON = await initNPM(sourceDir).then(readFile).then(parseJSON).then(setRepositoryDirectory(sourceDir));
-    const denoVersion = await Deno.readTextFile("version.json").then(parseJSON).catch(()=>null
-    );
-    const name = existingJSON.name ?? newJSON.name;
-    const version = denoVersion ?? existingJSON.version ?? newJSON.version;
-    const json = Object.assign({
-    }, commonJSON, newJSON, existingJSON, {
-        name,
-        version
-    });
-    return verifyName(json).then(verifyVersion).then(verifyPrivate).then((json1)=>{
-        forceWriteTextFile(targetFile, JSON.stringify(json1));
-        return json1.name;
-    }).then(set1("NPM_PACKAGE_NAME")).then(done).finally(()=>Deno.remove(sourceFile)
-    );
-}
-const envToString = async (env)=>[
-        ...env.entries()
-    ].map((e)=>e.join("=")
-    ).sort().join("\n").concat("\n")
-;
-const env = new Map();
-const set1 = (key)=>async (value)=>{
-        env.set(key, await Promise.resolve(value));
-        return value;
+    if (maxDepth < 0) {
+        return;
     }
-;
-await configImportMap(set1);
-await configNPM(set1);
-await configCache(set1);
-await configPackageJSON(set1);
-await envToString(env).then(verifyWriteTextFile(".env"));
-await configMakefiles([
-    [
-        "Makefile",
-        '# Include, then immediately export, environment variables in .env file.\n# These variables will be available to the Deno CLI.\ninclude .env\nexport\n\n# These settings can be safely disabled by setting the VARIABLE_NAME to nothing\n# in your deployment\'s .env file. For example, setting the following would\n# disable the local Deno cache in favor of Deno\'s global cache:\n#\n# DENO_DIR=\n#\nDENO_BUNDLE_FILE       ?= mod.js\nDENO_DEPENDENCIES_FILE ?= dependencies.ts\nDENO_DIR               ?= .deno\nDENO_MAIN              ?= mod.ts\nDENO_SOURCE_DIR        ?= source\nIMPORT_MAP             ?=\nLOCK_FILE              ?= lock_file.json\nNPM                    ?= npm\nRUN_PERMISSIONS        ?=\nTEST_PERMISSIONS       ?= --allow-read=./source,. --allow-run\nUSE_CACHE              ?= --cached-only\nUSE_UNSTABLE           ?=\n\n# The default values for these settings are meant to be easily overwritten by\n# your project\'s .env file.\n#\n# Do NOT set these values to nothing.\n#\nDENO_ABS               := $(PWD)/$(DENO_DIR)\nDENO_APP_DIR           ?= $(DENO_SOURCE_DIR)/app\nDENO_LIB_DIR           ?= $(DENO_SOURCE_DIR)/lib\n\nGEN_DIR                ?= /dev/null\n\nNPM_INSTALL            ?= $(NPM) install\nNPM_RUN                ?= $(NPM) run\nNPM_LINK               ?= $(NPM) link\nNPM_UNLINK             ?= $(NPM) unlink\n\nINTEGRATIONS           := $(shell find \"./integration-test/\" -maxdepth 1 -mindepth 1 -type d)\nPLATFORMS              := $(shell find \"./platform/\"         -maxdepth 1 -mindepth 1 -type d)\nREMOTE_DIRS            := $(shell find \".\"                   -type d -name \"remote\" -not -path \'*/\\.*\')\n\nLINT_FILES             := $(shell find \"$(DENO_SOURCE_DIR)\"  -type f -name \"*.ts\" -not -name \"*.test.ts\")\nREMOTE_DEPENDENCIES    := $(shell find \"$(REMOTE_DIRS)\"      -type f -name \"*.ts\")\nSOURCE_FILES           := $(shell find \"$(DENO_SOURCE_DIR)\"  -type f -name \"*.ts\")\n\nifneq ($(IMPORT_MAP),)\nIMPORT_MAP_OPTIONS     := --importmap $(IMPORT_MAP)\nUSE_UNSTABLE           := --unstable\nendif\n\nifneq ($(LOCK_FILE),)\nLOCK_OPTIONS           := --lock $(LOCK_FILE)\nLOCK_OPTIONS_WRITE     := --lock $(LOCK_FILE) --lock-write\nendif\n\ndefine print_header\n\t@echo\n\t@echo $1 $(CURDIR)\n\t@echo\nendef\n\nall: install lint build test-all\n\nifneq ($(PLATFORMS),)\n$(PLATFORMS):\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C $@ $(TARGET)\nendif\n\nifneq ($(INTEGRATIONS),)\n$(INTEGRATIONS):\n\t$(MAKE) DENO_DIR=$(DENO_ABS) -C $@ $(TARGET)\nendif\n\nifneq ($(LOCK_FILE),)\n$(LOCK_FILE): $(REMOTE_DEPENDENCIES) $(DENO_DEPENDENCIES_FILE)\n\t@read -p \\\n\t\t\"Dependencies have changed. Press [Enter] to update the cache and $(LOCK_FILE), or [Ctrl]+[C] to cancel:\" \\\n\t\tcancel\nifneq ($(RELOAD),)\n\t@echo \"Deleting $(DENO_DIR)...\"\n\trm -rf $(DENO_DIR)\nendif\n\tdeno cache --unstable \\\n\t\t$(RELOAD) \\\n\t\t$(RUN_PERMISSIONS) \\\n\t\t$(LOCK_OPTIONS_WRITE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(DENO_DEPENDENCIES_FILE)\nendif\n\nifneq ($(DENO_BUNDLE_FILE),)\n$(DENO_BUNDLE_FILE): $(LINT_FILES)\n\t@echo \"// deno-fmt-ignore-file\"   > $(DENO_BUNDLE_FILE)\n\t@echo \"// deno-lint-ignore-file\" >> $(DENO_BUNDLE_FILE)\n\t@echo \"// @ts-nocheck\"           >> $(DENO_BUNDLE_FILE)\n\tdeno bundle \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(USE_UNSTABLE) \\\n\t\t$(DENO_MAIN) \\\n\t\t>> $(DENO_BUNDLE_FILE)\nendif\n\nifneq ($(GEN_DIR),)\n$(GEN_DIR): $(SOURCE_FILES)\n\tmkdir -p $@\n\trsync -am --include=\"*.ts\" --delete-during \\\n\t\t$(DENO_APP_DIR)/ \\\n\t\t$@/\n\tfind $@ -type f -name \"*.ts\" -exec \\\n\t\tsed -i -E \"s/(from \\\"\\..+)(\\.d.ts)|(\\.ts)(\\\";?)/\\1\\4/g\" {} +\nendif\n\nifneq ($(DENO_DEPENDENCIES_FILE),)\n$(DENO_DEPENDENCIES_FILE): $(REMOTE_DEPENDENCIES)\n\t$(file > $(DENO_DEPENDENCIES_FILE),$(patsubst %,import \"./%\";,$(REMOTE_DEPENDENCIES)))\n\tdeno fmt $(DENO_DEPENDENCIES_FILE)\nendif\n\nbuild: .header(build) $(DENO_BUNDLE_FILE)\n\t$(MAKE) TARGET=$@ do-platform-action\n\t$(MAKE) TARGET=$@ do-integration-action\n\nclean: .header(clean)\n\t$(MAKE) TARGET=$@ do-platform-action\n\t$(MAKE) TARGET=$@ do-integration-action\n\nconfigure:\n\t./configure\n\ndo-platform-action: $(PLATFORMS)\n\ndo-integration-action: $(INTEGRATIONS)\n\nfmt: format\n\nformat:\n\tdeno fmt $(DENO_SOURCE_DIR) $(DENO_LIB_DIR)\n\n.header(build):\n\t$(call print_header, Building: )\n\n.header(clean):\n\t$(call print_header, Cleaning: )\n\n.header(install):\n\t$(call print_header, Installing: )\n\n.header(test):\n\t$(call print_header, Testing: )\n\ninstall: .header(install) $(LOCK_FILE)\n\t$(MAKE) TARGET=$@ do-platform-action\n\t$(MAKE) TARGET=$@ do-integration-action\n\nlint:\n\tdeno fmt --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)\n\t-deno lint --unstable $(RUN_PERMISSIONS) $(LINT_FILES)\n\nlint-quiet:\n\tdeno fmt --quiet --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)\n\t-deno lint --quiet --unstable $(RUN_PERMISSIONS) $(LINT_FILES)\n\nrun:\n\tdeno run $(RUN_PERMISSIONS) $(DENO_MAIN)\n\ntest: .header(test) $(LOCK_FILE)\n\tdeno test --unstable --coverage \\\n\t\t$(TEST_PERMISSIONS) \\\n\t\t$(LOCK_OPTIONS) \\\n\t\t$(USE_CACHE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(DENO_SOURCE_DIR)\n\ntest-all: .header(test) test\n\t$(MAKE) TARGET=test do-platform-action\n\t$(MAKE) TARGET=test do-integration-action\n\ntest-quiet: .header(test) $(LOCK_FILE)\n\tdeno test --unstable --failfast --quiet \\\n\t\t$(TEST_PERMISSIONS) \\\n\t\t$(LOCK_OPTIONS) \\\n\t\t$(USE_CACHE) \\\n\t\t$(IMPORT_MAP_OPTIONS) \\\n\t\t$(DENO_SOURCE_DIR)\n\ntest-watch: .header(test)\n\twhile inotifywait -e close_write $(DENO_APP_DIR); do make test; done\n\nupgrade:\n\t$(MAKE) --always-make RELOAD=--reload $(LOCK_FILE)\n\n.PHONY: \\\n\tall \\\n\tbuild \\\n\tclean configure \\\n\tdeno \\\n\tdo-platform-action do-integration-action \\\n\tfmt format \\\n\t.header(build) .header(clean) .header(install) .header(test) \\\n\tinstall \\\n\tlint lint-quiet \\\n\trun \\\n\ttest test-quiet test-watch \\\n\t$(PLATFORMS) $(INTEGRATIONS)\n'
-    ],
-    [
-        "platform/node/Makefile",
-        'DEVELOPMENT_FILES := $(shell find \"$(PWD)/$(DENO_SOURCE_DIR)\" -type f -name \"*.ts\")\nGEN_DIR           := $(CURDIR)/source/gen\n\nNPM_INSTALL       ?= $(NPM) install\nNPM_RUN           ?= $(NPM) run\nNPM_LINK          ?= $(NPM) link\nNPM_UNLINK        ?= $(NPM) unlink\n\nall: install test build\n\n$(GEN_DIR): $(DEVELOPMENT_FILES)\n\t$(MAKE) GEN_DIR=$(GEN_DIR) -C $(PWD) $(GEN_DIR)\n\nbuild: $(GEN_DIR)\n\trm -rf build\n\t$(NPM_RUN) build-production\n\t$(NPM_LINK)\n\nclean:\n\t-$(NPM_UNLINK)\n\trm -rf .npmignore .nyc_output build node_modules $(GEN_DIR) test-build\n\ninstall:\n\t$(NPM_INSTALL)\n\ntest: test-build\n\t$(NPM_RUN) test\n\ntest-build: $(GEN_DIR)\n\trm -rf test-build\n\t$(NPM_RUN) build-development\n\n.PHONY: all clean install test\n'
-    ], 
-]);
+    if (includeDirs && include(root, exts, match, skip)) {
+        yield _createWalkEntrySync(root);
+    }
+    if (maxDepth < 1 || !include(root, undefined, undefined, skip)) {
+        return;
+    }
+    for (const entry of Deno.readDirSync(root)){
+        if (entry.isSymlink) {
+            if (followSymlinks) {
+                throw new Error("unimplemented");
+            } else {
+                continue;
+            }
+        }
+        assert(entry.name != null);
+        const path1 = join(root, entry.name);
+        if (entry.isFile) {
+            if (includeFiles && include(path1, exts, match, skip)) {
+                yield {
+                    path: path1,
+                    ...entry
+                };
+            }
+        } else {
+            yield* walkSync(path1, {
+                maxDepth: maxDepth - 1,
+                includeFiles,
+                includeDirs,
+                followSymlinks,
+                exts,
+                match,
+                skip
+            });
+        }
+    }
+}
+const isWindows1 = Deno.build.os == "windows";
+function split(path1) {
+    const s = SEP_PATTERN.source;
+    const segments = path1.replace(new RegExp(`^${s}|${s}$`, "g"), "").split(SEP_PATTERN);
+    const isAbsolute_ = isAbsolute(path1);
+    return {
+        segments,
+        isAbsolute: isAbsolute_,
+        hasTrailingSep: !!path1.match(new RegExp(`${s}$`)),
+        winRoot: isWindows1 && isAbsolute_ ? segments.shift() : undefined
+    };
+}
+function throwUnlessNotFound(error) {
+    if (!(error instanceof Deno.errors.NotFound)) {
+        throw error;
+    }
+}
+function comparePath(a, b) {
+    if (a.path < b.path) return -1;
+    if (a.path > b.path) return 1;
+    return 0;
+}
+const isWindows2 = Deno.build.os === "windows";
+async function ensureValidCopy(src, dest, options, isCopyFolder = false) {
+    let destStat;
+    try {
+        destStat = await Deno.lstat(dest);
+    } catch (err) {
+        if (err instanceof Deno.errors.NotFound) {
+            return;
+        }
+        throw err;
+    }
+    if (isCopyFolder && !destStat.isDirectory) {
+        throw new Error(`Cannot overwrite non-directory '${dest}' with directory '${src}'.`);
+    }
+    if (!options.overwrite) {
+        throw new Error(`'${dest}' already exists.`);
+    }
+    return destStat;
+}
+function ensureValidCopySync(src, dest, options, isCopyFolder = false) {
+    let destStat;
+    try {
+        destStat = Deno.lstatSync(dest);
+    } catch (err) {
+        if (err instanceof Deno.errors.NotFound) {
+            return;
+        }
+        throw err;
+    }
+    if (isCopyFolder && !destStat.isDirectory) {
+        throw new Error(`Cannot overwrite non-directory '${dest}' with directory '${src}'.`);
+    }
+    if (!options.overwrite) {
+        throw new Error(`'${dest}' already exists.`);
+    }
+    return destStat;
+}
+async function copyFile(src, dest, options) {
+    await ensureValidCopy(src, dest, options);
+    await Deno.copyFile(src, dest);
+    if (options.preserveTimestamps) {
+        const statInfo = await Deno.stat(src);
+        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        await Deno.utime(dest, statInfo.atime, statInfo.mtime);
+    }
+}
+function copyFileSync(src, dest, options) {
+    ensureValidCopySync(src, dest, options);
+    Deno.copyFileSync(src, dest);
+    if (options.preserveTimestamps) {
+        const statInfo = Deno.statSync(src);
+        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        Deno.utimeSync(dest, statInfo.atime, statInfo.mtime);
+    }
+}
+async function copySymLink(src, dest, options) {
+    await ensureValidCopy(src, dest, options);
+    const originSrcFilePath = await Deno.readLink(src);
+    const type = getFileInfoType(await Deno.lstat(src));
+    if (isWindows2) {
+        await Deno.symlink(originSrcFilePath, dest, {
+            type: type === "dir" ? "dir" : "file"
+        });
+    } else {
+        await Deno.symlink(originSrcFilePath, dest);
+    }
+    if (options.preserveTimestamps) {
+        const statInfo = await Deno.lstat(src);
+        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        await Deno.utime(dest, statInfo.atime, statInfo.mtime);
+    }
+}
+function copySymlinkSync(src, dest, options) {
+    ensureValidCopySync(src, dest, options);
+    const originSrcFilePath = Deno.readLinkSync(src);
+    const type = getFileInfoType(Deno.lstatSync(src));
+    if (isWindows2) {
+        Deno.symlinkSync(originSrcFilePath, dest, {
+            type: type === "dir" ? "dir" : "file"
+        });
+    } else {
+        Deno.symlinkSync(originSrcFilePath, dest);
+    }
+    if (options.preserveTimestamps) {
+        const statInfo = Deno.lstatSync(src);
+        assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        Deno.utimeSync(dest, statInfo.atime, statInfo.mtime);
+    }
+}
+async function copyDir(src, dest, options) {
+    const destStat = await ensureValidCopy(src, dest, options, true);
+    if (!destStat) {
+        await ensureDir(dest);
+    }
+    if (options.preserveTimestamps) {
+        const srcStatInfo = await Deno.stat(src);
+        assert(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        await Deno.utime(dest, srcStatInfo.atime, srcStatInfo.mtime);
+    }
+    for await (const entry of Deno.readDir(src)){
+        const srcPath = join(src, entry.name);
+        const destPath = join(dest, basename(srcPath));
+        if (entry.isSymlink) {
+            await copySymLink(srcPath, destPath, options);
+        } else if (entry.isDirectory) {
+            await copyDir(srcPath, destPath, options);
+        } else if (entry.isFile) {
+            await copyFile(srcPath, destPath, options);
+        }
+    }
+}
+function copyDirSync(src, dest, options) {
+    const destStat = ensureValidCopySync(src, dest, options, true);
+    if (!destStat) {
+        ensureDirSync(dest);
+    }
+    if (options.preserveTimestamps) {
+        const srcStatInfo = Deno.statSync(src);
+        assert(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
+        assert(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
+        Deno.utimeSync(dest, srcStatInfo.atime, srcStatInfo.mtime);
+    }
+    for (const entry of Deno.readDirSync(src)){
+        assert(entry.name != null, "file.name must be set");
+        const srcPath = join(src, entry.name);
+        const destPath = join(dest, basename(srcPath));
+        if (entry.isSymlink) {
+            copySymlinkSync(srcPath, destPath, options);
+        } else if (entry.isDirectory) {
+            copyDirSync(srcPath, destPath, options);
+        } else if (entry.isFile) {
+            copyFileSync(srcPath, destPath, options);
+        }
+    }
+}
+var EOL;
+(function(EOL1) {
+    EOL1["LF"] = "\n";
+    EOL1["CRLF"] = "\r\n";
+})(EOL || (EOL = {
+}));
+export { stripColor1 as stripColor };
+export class Prompt {
+    constructor(message){
+        this.message = message;
+        this.accept = [];
+    }
+    static set(key) {
+        return (value)=>(options)=>({
+                    ...options,
+                    [key]: value
+                })
+        ;
+    }
+    static check(prompt) {
+        return (input)=>Promise.resolve(input).then(orDefault(prompt)).then(orSanitize(prompt)).then(orAccept(prompt)).then(orValidate(prompt)).then(orFormat(prompt))
+        ;
+    }
+    static getHint(prompt) {
+        const { accept , defaultTo  } = prompt;
+        const set = new Set(accept);
+        if (defaultTo) set.add(defaultTo);
+        const as = Array.from(set).map((s)=>s === defaultTo ? brightWhite(s) : dim(s)
+        );
+        const hint = as.length > 2 ? dim("(") + as.join(dim(", ")) + dim(") ") : as.length > 0 ? dim("(") + as.join(dim("/")) + dim(") ") : "";
+        return hint;
+    }
+}
+function orAccept({ accept , defaultTo  }) {
+    return async (input)=>accept.length === 0 ? input : accept.includes(input) || input === defaultTo ? input : Promise.reject(new TypeError(`input ${input} is not default, ${defaultTo}, or in accept list [${accept.map((s)=>`"${s}"`
+        ).join(", ")}]`))
+    ;
+}
+function orDefault(options) {
+    return async (input)=>input === "" && options.defaultTo != null ? options.defaultTo : input === "" && options.defaultTo == null ? Promise.reject(new TypeError(`no input, no default value`)) : input
+    ;
+}
+function orFormat(options) {
+    return async (input)=>typeof options.format === "function" ? options.format(input, options) : input
+    ;
+}
+function orSanitize(options) {
+    return async (input)=>typeof options.sanitize === "function" ? options.sanitize(input, options) : input
+    ;
+}
+function orValidate(options) {
+    return async (input)=>{
+        if (typeof options.validate === "function") {
+            return options.validate(input, options) ? input : Promise.reject(new TypeError(`input ${input} failed to validate`));
+        }
+        return input;
+    };
+}
+class Question {
+    #prompt;
+    constructor(value1){
+        if (typeof value1 === "string") {
+            this.#prompt = Promise.resolve(new Prompt(value1));
+        } else {
+            this.#prompt = value1;
+        }
+    }
+    accept(...input) {
+        const prompt = this.#prompt.then((prompt1)=>{
+            const { accept: current = [] , ...rest } = prompt1;
+            const set = new Set([
+                ...current,
+                ...input
+            ]);
+            return {
+                ...rest,
+                accept: [
+                    ...set
+                ]
+            };
+        });
+        return new Question(prompt);
+    }
+    acceptPartial(...input) {
+        const quest = this.accept(...input).sanitize((input, options)=>{
+            if (input.length === 0) return input;
+            if (input === options.defaultTo) return input;
+            const maybe = options.accept.reduce((maybe1, accepts)=>accepts.startsWith(input) ? [
+                    ...maybe1,
+                    accepts
+                ] : maybe1
+            , []);
+            return maybe.length === 1 ? maybe[0] : input;
+        });
+        return quest;
+    }
+    defaultTo(value) {
+        return new Question(this.#prompt.then(Prompt.set("defaultTo")(value)));
+    }
+    format(formatter) {
+        return new Question(this.#prompt.then(Prompt.set("format")(formatter)));
+    }
+    retry(value) {
+        return new Question(this.#prompt.then(Prompt.set("retry")(value)));
+    }
+    sanitize(sanitizer) {
+        return new Question(this.#prompt.then(Prompt.set("sanitize")(sanitizer)));
+    }
+    validate(validator) {
+        return new Question(this.#prompt.then(Prompt.set("validate")(validator)));
+    }
+    prompt() {
+        return this.#prompt.then((options)=>stdout(`${options.message}: ${Prompt.getHint(options)}`).then(stdin).then(Prompt.check(options)).catch((reason)=>options.retry ? this.prompt() : Promise.reject(reason)
+            )
+        );
+    }
+}
+export function question(message1) {
+    return new Question(message1);
+}
+export function askYesNo(message1) {
+    return new Question(message1).acceptPartial("yes", "no").retry();
+}
+export const Q = async (...questions)=>{
+    const answered = [];
+    for await (const q of questions){
+        answered.push(await q.prompt());
+    }
+    return answered;
+};
+export async function done() {
+}
+export function forceWriteTextFile(filename, data) {
+    return Deno.writeTextFile(filename, data);
+}
+export function ifYes(action) {
+    return async (input)=>{
+        if (input === "yes" || input === true) await action();
+        return input;
+    };
+}
+export function ifNo(action) {
+    return async (input)=>{
+        if (input === "no" || input === false) await action();
+        return input;
+    };
+}
+export function stdout(message1) {
+    return Deno.stdout.write(new TextEncoder().encode(message1));
+}
+export async function stdin(accept = 1024) {
+    const max = 1024;
+    const buf = new Uint8Array(accept > 1024 ? accept : 1024);
+    const got = await Deno.stdin.read(buf);
+    return new TextDecoder().decode(buf.subarray(0, accept < got ? accept : got)).trim();
+}
+export function verifyWriteTextFile(filename) {
+    return async (data)=>{
+        const justCreate = ()=>Deno.writeTextFile(filename, data)
+        ;
+        const askOverwrite = async ()=>askYesNo(`File ${filename} exists, overwrite`).prompt().then(ifYes(justCreate)).then(done)
+        ;
+        await exists(filename).then(ifNo(justCreate)).then(ifYes(askOverwrite));
+    };
+}
+export function sendInput(handle) {
+    return (message1 = "")=>handle.write(new TextEncoder().encode(message1 + "\n"))
+    ;
+}
+export function getOutput(handle) {
+    return (accept = 1024)=>async ()=>{
+            const max = 1024;
+            const buf = new Uint8Array(accept > 1024 ? accept : 1024);
+            const got = await handle.read(buf);
+            return new TextDecoder().decode(buf.subarray(0, accept < got ? accept : got)).trim();
+        }
+    ;
+}
 
