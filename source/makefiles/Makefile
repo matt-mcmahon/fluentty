@@ -1,9 +1,15 @@
 TSFILES:=$(patsubst %.mk,%.ts,$(wildcard *.mk))
 
-all: $(TSFILES)
+build: $(TSFILES) format
 
 clean:
 	rm -rf $(TSFILES)
+
+test:
+	# nothing
+
+format: $(TSFILES)
+	deno fmt $(TSFILES)
 
 %.ts: %.mk
 	deno run \
@@ -12,6 +18,5 @@ clean:
 		../text-file-to-module.ts \
 		$(CURDIR)/$@ \
 		$(CURDIR)/$<
-	deno fmt .
 
-.PHONY: clean all
+.PHONY: build clean format

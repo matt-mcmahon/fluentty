@@ -1,9 +1,0 @@
-#!/bin/sh
-
-deno "run" \
-	"--allow-run" \
-	"--allow-read=$PWD" \
-	"--allow-write=$PWD" \
-	"--unstable" \
-	"file:///$PWD/configure.js"  \
-	"$@"

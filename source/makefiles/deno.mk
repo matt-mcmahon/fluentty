@@ -58,7 +58,7 @@ endif
 
 define print_header
 	@echo
-	@echo $1
+	@echo $1 $(CURDIR)
 	@echo
 endef
 
@@ -140,16 +140,16 @@ format:
 	deno fmt $(DENO_SOURCE_DIR) $(DENO_LIB_DIR)
 
 .header(build):
-	$(call print_header, Building...)
+	$(call print_header, Building: )
 
 .header(clean):
-	$(call print_header, Cleaning...)
+	$(call print_header, Cleaning: )
 
 .header(install):
-	$(call print_header, Installing...)
+	$(call print_header, Installing: )
 
 .header(test):
-	$(call print_header, Testing...)
+	$(call print_header, Testing: )
 
 install: .header(install) $(LOCK_FILE)
 	$(MAKE) TARGET=$@ do-platform-action

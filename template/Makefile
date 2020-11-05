@@ -4,40 +4,47 @@ include .env
 export
 
 # These settings can be safely disabled by setting the VARIABLE_NAME to nothing
-# in your deployment's .env file. For template, setting the following would
+# in your deployment's .env file. For example, setting the following would
 # disable the local Deno cache in favor of Deno's global cache:
 #
 # DENO_DIR=
 #
-DENO_BUNDLE_FILE       ?= configure.js
+DENO_BUNDLE_FILE       ?= mod.js
 DENO_DEPENDENCIES_FILE ?= dependencies.ts
 DENO_DIR               ?= .deno
-DENO_MAIN              ?= module.ts
+DENO_MAIN              ?= mod.ts
 DENO_SOURCE_DIR        ?= source
 IMPORT_MAP             ?=
 LOCK_FILE              ?= lock_file.json
 NPM                    ?= npm
 RUN_PERMISSIONS        ?=
-TEST_PERMISSIONS       ?= --allow-run --allow-read --allow-write
+TEST_PERMISSIONS       ?= --allow-read=./source,. --allow-run
 USE_CACHE              ?= --cached-only
-USE_UNSTABLE           ?= --unstable
+USE_UNSTABLE           ?=
 
 # The default values for these settings are meant to be easily overwritten by
 # your project's .env file.
 #
 # Do NOT set these values to nothing.
 #
-DENO_DIR_ABS           := $(PWD)/$(DENO_DIR)
+DENO_ABS               := $(PWD)/$(DENO_DIR)
+DENO_APP_DIR           ?= $(DENO_SOURCE_DIR)/app
+DENO_LIB_DIR           ?= $(DENO_SOURCE_DIR)/lib
 
 GEN_DIR                ?= /dev/null
 
-REMOTE_DIRS            := remote
+NPM_INSTALL            ?= $(NPM) install
+NPM_RUN                ?= $(NPM) run
+NPM_LINK               ?= $(NPM) link
+NPM_UNLINK             ?= $(NPM) unlink
+
+INTEGRATIONS           := $(shell find "./integration-test/" -maxdepth 1 -mindepth 1 -type d)
+PLATFORMS              := $(shell find "./platform/"         -maxdepth 1 -mindepth 1 -type d)
+REMOTE_DIRS            := $(shell find "."                   -type d -name "remote" -not -path '*/\.*')
 
 LINT_FILES             := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts" -not -name "*.test.ts")
 REMOTE_DEPENDENCIES    := $(shell find "$(REMOTE_DIRS)"      -type f -name "*.ts")
 SOURCE_FILES           := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts")
-
-OPTIONAL_EXTENSIONS    := (\.d.ts)|(\.ts)|(\.js)
 
 ifneq ($(wildcard $(IMPORT_MAP)),)
 IMPORT_MAP_OPTIONS     := --importmap $(IMPORT_MAP)
@@ -52,21 +59,23 @@ LOCK_OPTIONS           := --lock $(LOCK_FILE)
 LOCK_OPTIONS_WRITE     := --lock $(LOCK_FILE) --lock-write
 endif
 
-define submake
-	$(MAKE) DENO_DIR=$(DENO_DIR_ABS) -C $2 $1
-endef
-
-define MakeTemplate
-	$(MAKE) DENO_DIR=$(DENO_DIR_ABS) PWD=$(PWD)/template -C template $1
-endef
-
-define print-header
+define print_header
 	@echo
 	@echo $1 $(CURDIR)
 	@echo
 endef
 
 all: install lint build test-all
+
+ifneq ($(PLATFORMS),)
+$(PLATFORMS):
+	$(MAKE) DENO_DIR=$(DENO_ABS) -C $@ $(TARGET)
+endif
+
+ifneq ($(INTEGRATIONS),)
+$(INTEGRATIONS):
+	$(MAKE) DENO_DIR=$(DENO_ABS) -C $@ $(TARGET)
+endif
 
 ifneq ($(LOCK_FILE),)
 $(LOCK_FILE): $(REMOTE_DEPENDENCIES) $(DENO_DEPENDENCIES_FILE)
@@ -86,8 +95,7 @@ endif
 endif
 
 ifneq ($(DENO_BUNDLE_FILE),)
-$(DENO_BUNDLE_FILE): $(LINT_FILES) $(REMOTE_DEPENDENCIES)
-	$(MAKE) DENO_DIR=$(DENO_DIR_ABS) -C source/makefiles build
+$(DENO_BUNDLE_FILE): $(LINT_FILES)
 	@echo "// deno-fmt-ignore-file"   > $(DENO_BUNDLE_FILE)
 	@echo "// deno-lint-ignore-file" >> $(DENO_BUNDLE_FILE)
 	@echo "// @ts-nocheck"           >> $(DENO_BUNDLE_FILE)
@@ -98,34 +106,57 @@ $(DENO_BUNDLE_FILE): $(LINT_FILES) $(REMOTE_DEPENDENCIES)
 		>> $(DENO_BUNDLE_FILE)
 endif
 
+ifneq ($(GEN_DIR),)
+$(GEN_DIR): $(SOURCE_FILES)
+	mkdir -p $@
+	rsync -am --include="*.ts" --delete-during \
+		$(DENO_APP_DIR)/ \
+		$@/
+	find $@ -type f -name "*.ts" -exec \
+		sed -i -E "s/(from \"\..+)(\.d.ts)|(\.ts)(\";?)/\1\4/g" {} +
+endif
+
 ifneq ($(DENO_DEPENDENCIES_FILE),)
 $(DENO_DEPENDENCIES_FILE): $(REMOTE_DEPENDENCIES)
 	$(file > $(DENO_DEPENDENCIES_FILE),$(patsubst %,import "./%";,$(REMOTE_DEPENDENCIES)))
 	deno fmt $(DENO_DEPENDENCIES_FILE)
 endif
 
-build: .print-build-header build-makefiles $(DENO_BUNDLE_FILE)
-	$(call MakeTemplate, install build)
+build: .header(build) $(DENO_BUNDLE_FILE)
+	$(MAKE) TARGET=$@ do-platform-action
+	$(MAKE) TARGET=$@ do-integration-action
 
-build-makefiles:
-	$(call submake,build,source/makefiles)
-
-clean: .print-clean-header
-	rm -f $(DENO_BUNDLE_FILE)
-	$(call submake,$@,source/makefiles)
-	$(call MakeTemplate, $@)
+clean: .header(clean)
+	$(MAKE) TARGET=$@ do-platform-action
+	$(MAKE) TARGET=$@ do-integration-action
 
 configure:
 	./configure
 
+do-platform-action: $(PLATFORMS)
+
+do-integration-action: $(INTEGRATIONS)
+
 fmt: format
 
 format:
-	deno fmt $(DENO_SOURCE_DIR)
-	$(call submake,$@,source/makefiles)
-	$(call MakeTemplate, $@)
+	deno fmt $(DENO_SOURCE_DIR) $(DENO_LIB_DIR)
 
-install: .print-install-header $(LOCK_FILE)
+.header(build):
+	$(call print_header, Building: )
+
+.header(clean):
+	$(call print_header, Cleaning: )
+
+.header(install):
+	$(call print_header, Installing: )
+
+.header(test):
+	$(call print_header, Testing: )
+
+install: .header(install) $(LOCK_FILE)
+	$(MAKE) TARGET=$@ do-platform-action
+	$(MAKE) TARGET=$@ do-integration-action
 
 lint:
 	deno fmt --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)
@@ -138,20 +169,7 @@ lint-quiet:
 run:
 	deno run $(RUN_PERMISSIONS) $(DENO_MAIN)
 
-test: .print-test-header $(LOCK_FILE)
-	deno test --unstable \
-		$(TEST_PERMISSIONS) \
-		$(LOCK_OPTIONS) \
-		$(USE_CACHE) \
-		$(IMPORT_MAP_OPTIONS) \
-		$(DENO_SOURCE_DIR)
-
-test-all: .print-test-header test-coverage
-	$(call submake,test,source/makefiles)
-	$(call submake,test,template)
-
-
-test-coverage: .print-test-header $(LOCK_FILE)
+test: .header(test) $(LOCK_FILE)
 	deno test --unstable --coverage \
 		$(TEST_PERMISSIONS) \
 		$(LOCK_OPTIONS) \
@@ -159,7 +177,11 @@ test-coverage: .print-test-header $(LOCK_FILE)
 		$(IMPORT_MAP_OPTIONS) \
 		$(DENO_SOURCE_DIR)
 
-test-quiet: .print-test-header $(LOCK_FILE)
+test-all: .header(test) test
+	$(MAKE) TARGET=test do-platform-action
+	$(MAKE) TARGET=test do-integration-action
+
+test-quiet: .header(test) $(LOCK_FILE)
 	deno test --unstable --failfast --quiet \
 		$(TEST_PERMISSIONS) \
 		$(LOCK_OPTIONS) \
@@ -167,32 +189,22 @@ test-quiet: .print-test-header $(LOCK_FILE)
 		$(IMPORT_MAP_OPTIONS) \
 		$(DENO_SOURCE_DIR)
 
-test-watch: .print-test-header
-	while inotifywait -e close_write $(DENO_SOURCE_DIR); do make test; done
+test-watch: .header(test)
+	while inotifywait -e close_write $(DENO_APP_DIR); do make test; done
 
 upgrade:
 	$(MAKE) --always-make RELOAD=--reload $(LOCK_FILE)
-
-.print-build-header:
-	$(call print-header, Building: )
-
-.print-clean-header:
-	$(call print-header, Cleaning: )
-
-.print-install-header:
-	$(call print-header, Installing: )
-
-.print-test-header:
-	$(call print-header, Testing: )
 
 .PHONY: \
 	all \
 	build \
 	clean configure \
+	deno \
+	do-platform-action do-integration-action \
 	fmt format \
-	.print-build-header .print-clean-header .print-install-header .print-test-header \
+	.header(build) .header(clean) .header(install) .header(test) \
 	install \
 	lint lint-quiet \
 	run \
-	test test-all test-coverage test-quiet test-watch \
-	upgrade
+	test test-quiet test-watch \
+	$(PLATFORMS) $(INTEGRATIONS)
