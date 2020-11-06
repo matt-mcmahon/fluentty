@@ -3,7 +3,7 @@
 **Fluentty** is a a fluent prompt builder for terminal programs. It works like so:
 
 ```javascript
-import { bgBrightYellow, bold, red, stripColor } from "../remote/colors.ts";
+import { bgBrightYellow, bold, red, stripColor } from "https://deno.land/std@0.76.0/fmt/colors.ts";
 import { Q, question } from "https://raw.githubusercontent.com/matt-mcmahon/fluentty/v0.2.0/module.ts";
 
 const done = await Q(
@@ -20,4 +20,3 @@ const done = await Q(
 
 console.log(JSON.stringify(done.map(stripColor).sort()));
 ```
-
