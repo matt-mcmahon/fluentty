@@ -158,11 +158,17 @@ class Question {
   }
 
   /**
-   * Validate input using a list of acceptable input strings. List is checked
-   * after the `sanitize` function is run. Input must match exactly.
+   * Validate input using a Set of acceptable input strings. This set is checked
+   * after the `sanitize` function is run.
    *
-   * Given, `accept('Acceptable')`, only "Acceptable" will be accepted, input of
-   * "accept", "acceptable", or "a" will all be rejected.
+   * User input must match exactly. Given, `accept("Acceptable")`, the only
+   * valid input will be the string "Acceptable". Entering  "accept",
+   * "acceptable", or "a" will be rejected.
+   *
+   * Multiple calls to accept will add additional acceptable input to the list.
+   * Given `question.accept("right").accept("left")` both `"left"` and `"right"`
+   * will be acceptable input.
+   *
    */
   accept(...input: string[]): Question {
     const prompt = this.#prompt.then((prompt): Prompt => {
@@ -207,7 +213,7 @@ class Question {
   /**
    * Run after the user's input is found valid.
    */
-  format(formatter: (input: string, options: Prompt) => string): Question {
+  format(formatter: (input: string, prompt: Prompt) => string): Question {
     return Question.from(this.#prompt.then(Prompt.set("format")(formatter)));
   }
 
@@ -216,7 +222,7 @@ class Question {
    *
    * @param value retry on invalid input
    */
-  retry(value?: boolean): Question {
+  retry(value = true): Question {
     const prompt = this.#prompt.then(Prompt.set("retry")(value));
     return Question.from(prompt);
   }
@@ -225,22 +231,21 @@ class Question {
    * Sanitizes the users input before matching against the accept list, or trying
    * to validate.
    */
-  sanitize(sanitizer: (input: string, options: Prompt) => string): Question {
+  sanitize(sanitizer: (input: string, prompt: Prompt) => string): Question {
     const prompt = this.#prompt.then(Prompt.set("sanitize")(sanitizer));
     return Question.from(prompt);
   }
 
   /**
-   * Use a rule-based validation method. If the validation function returns
-   * `true`, `prompt(...)` will acceptable the input, if `false` then the prompt
-   * will reject the input.
+   * Use a predicate to validate user input. If the validation function returns
+   * `true`, the input is acceptable, if it returns `false` then input is not
+   * valid.
    *
-   * __Note__:
-   * If you provide a `defaultTo` value, you do not need to consider an empty
-   * input string in your validate function. Empty input will be replaced with the
-   * `defaultTo` value before your validation function is run.
+   * Validate is checked after the `defaultTo` and `accept` rules have been
+   * applied. If you've set a `defaultTo` value, validate will never receive the
+   * empty string.
    */
-  validate(validator: (input: string, options: Prompt) => boolean): Question {
+  validate(validator: (input: string, prompt: Prompt) => boolean): Question {
     return Question.from(this.#prompt.then(Prompt.set("validate")(validator)));
   }
 
@@ -250,7 +255,6 @@ class Question {
         .then(stdin)
         .then(Prompt.check(options))
         .catch((reason): Promise<string> => {
-          console.dir(this.#prompt);
           return options.retry ? this.prompt() : Promise.reject(reason);
         })
     );

@@ -1735,52 +1735,64 @@ var EOL;
 }));
 export { stripColor1 as stripColor };
 export class Prompt {
-    constructor(message){
-        this.message = message;
-        this.accept = [];
+    constructor(options){
+        const { accept =[] , defaultTo , format: format1 , message: message1 , retry , sanitize , validate ,  } = options;
+        this.accept = accept;
+        this.defaultTo = defaultTo;
+        this.format = format1;
+        this.message = message1;
+        this.retry = retry;
+        this.sanitize = sanitize;
+        this.validate = validate;
+        Object.freeze(this);
     }
     static set(key) {
-        return (value)=>(options)=>({
-                    ...options,
+        return (value)=>(options1)=>({
+                    ...options1,
                     [key]: value
                 })
         ;
+    }
+    static from(message) {
+        return new Prompt({
+            message
+        });
     }
     static check(prompt) {
         return (input)=>Promise.resolve(input).then(orDefault(prompt)).then(orSanitize(prompt)).then(orAccept(prompt)).then(orValidate(prompt)).then(orFormat(prompt))
         ;
     }
     static getHint(prompt) {
-        const { accept , defaultTo  } = prompt;
-        const set = new Set(accept);
-        if (defaultTo) set.add(defaultTo);
-        const as = Array.from(set).map((s)=>s === defaultTo ? brightWhite(s) : dim(s)
+        const { accept: accept1 , defaultTo: defaultTo1  } = prompt;
+        const set = new Set(accept1);
+        if (defaultTo1) set.add(defaultTo1);
+        const as = Array.from(set).map((s)=>s === defaultTo1 ? brightWhite(s) : dim(s)
         );
         const hint = as.length > 2 ? dim("(") + as.join(dim(", ")) + dim(") ") : as.length > 0 ? dim("(") + as.join(dim("/")) + dim(") ") : "";
         return hint;
     }
 }
-function orAccept({ accept , defaultTo  }) {
-    return async (input)=>accept.length === 0 ? input : accept.includes(input) || input === defaultTo ? input : Promise.reject(new TypeError(`input ${input} is not default, ${defaultTo}, or in accept list [${accept.map((s)=>`"${s}"`
+function orAccept({ accept: accept1 = [] , defaultTo: defaultTo1  }) {
+    return async (input)=>accept1.length === 0 ? input : accept1.includes(input) || input === defaultTo1 ? input : Promise.reject(new TypeError(`input ${input} is not default, ${defaultTo1}, or in accept list [${accept1.map((s)=>`"${s}"`
         ).join(", ")}]`))
     ;
 }
-function orDefault(options) {
-    return async (input)=>input === "" && options.defaultTo != null ? options.defaultTo : input === "" && options.defaultTo == null ? Promise.reject(new TypeError(`no input, no default value`)) : input
+function orDefault(options1) {
+    return async (input)=>input === "" && options1.defaultTo != null ? options1.defaultTo : input === "" && options1.defaultTo == null ? Promise.reject(new TypeError(`no input, no default value`)) : input
     ;
 }
-function orFormat(options) {
-    return async (input)=>typeof options.format === "function" ? options.format(input, options) : input
+function orFormat(options1) {
+    return async (input)=>typeof options1.format === "function" ? options1.format(input, options1) : input
     ;
 }
-function orSanitize(options) {
-    return async (input)=>typeof options.sanitize === "function" ? options.sanitize(input, options) : input
+function orSanitize(options1) {
+    return async (input)=>typeof options1.sanitize === "function" ? options1.sanitize(input, options1) : input
     ;
 }
-function orValidate(options) {
+function orValidate(options1) {
     return async (input)=>{
-        if (typeof options.validate === "function") {
-            return options.validate(input, options) ? input : Promise.reject(new TypeError(`input ${input} failed to validate`));
+        if (typeof options1.validate === "function") {
+            return options1.validate(input, options1) ? input : Promise.reject(new TypeError(`input ${input} failed to validate`));
         }
         return input;
     };
@@ -1788,33 +1800,29 @@ function orValidate(options) {
 class Question {
     #prompt;
     constructor(value1){
-        if (typeof value1 === "string") {
-            this.#prompt = Promise.resolve(new Prompt(value1));
-        } else {
-            this.#prompt = value1;
-        }
+        this.#prompt = value1;
+    }
+    static from(prompt) {
+        return new Question(Promise.resolve(prompt));
     }
     accept(...input) {
         const prompt = this.#prompt.then((prompt1)=>{
-            const { accept: current = [] , ...rest } = prompt1;
+            const { accept: current = []  } = prompt1;
             const set = new Set([
                 ...current,
                 ...input
             ]);
-            return {
-                ...rest,
-                accept: [
-                    ...set
-                ]
-            };
+            return Prompt.set("accept")([
+                ...set
+            ])(prompt1);
         });
-        return new Question(prompt);
+        return Question.from(prompt);
     }
     acceptPartial(...input) {
-        const quest = this.accept(...input).sanitize((input, options)=>{
+        const quest = this.accept(...input).sanitize((input, { defaultTo: defaultTo1 , accept: accept1 = []  })=>{
             if (input.length === 0) return input;
-            if (input === options.defaultTo) return input;
-            const maybe = options.accept.reduce((maybe1, accepts)=>accepts.startsWith(input) ? [
+            if (input === defaultTo1) return input;
+            const maybe = accept1.reduce((maybe1, accepts)=>accepts.startsWith(input) ? [
                     ...maybe1,
                     accepts
                 ] : maybe1
@@ -1824,31 +1832,34 @@ class Question {
         return quest;
     }
     defaultTo(value) {
-        return new Question(this.#prompt.then(Prompt.set("defaultTo")(value)));
+        return Question.from(this.#prompt.then(Prompt.set("defaultTo")(value)));
     }
     format(formatter) {
-        return new Question(this.#prompt.then(Prompt.set("format")(formatter)));
+        return Question.from(this.#prompt.then(Prompt.set("format")(formatter)));
     }
-    retry(value) {
-        return new Question(this.#prompt.then(Prompt.set("retry")(value)));
+    retry(value = true) {
+        const prompt = this.#prompt.then(Prompt.set("retry")(value));
+        return Question.from(prompt);
     }
     sanitize(sanitizer) {
-        return new Question(this.#prompt.then(Prompt.set("sanitize")(sanitizer)));
+        const prompt = this.#prompt.then(Prompt.set("sanitize")(sanitizer));
+        return Question.from(prompt);
     }
     validate(validator) {
-        return new Question(this.#prompt.then(Prompt.set("validate")(validator)));
+        return Question.from(this.#prompt.then(Prompt.set("validate")(validator)));
     }
     prompt() {
-        return this.#prompt.then((options)=>stdout(`${options.message}: ${Prompt.getHint(options)}`).then(stdin).then(Prompt.check(options)).catch((reason)=>options.retry ? this.prompt() : Promise.reject(reason)
-            )
+        return this.#prompt.then((options1)=>stdout(`${options1.message}: ${Prompt.getHint(options1)}`).then(stdin).then(Prompt.check(options1)).catch((reason)=>{
+                return options1.retry ? this.prompt() : Promise.reject(reason);
+            })
         );
     }
 }
-export function question(message1) {
-    return new Question(message1);
+export function question(message2) {
+    return Question.from(Prompt.from(message2));
 }
-export function askYesNo(message1) {
-    return new Question(message1).acceptPartial("yes", "no").retry();
+export function askYesNo(message2) {
+    return question(message2).acceptPartial("yes", "no").retry();
 }
 export const Q = async (...questions)=>{
     const answered = [];
@@ -1874,14 +1885,14 @@ export function ifNo(action) {
         return input;
     };
 }
-export function stdout(message1) {
-    return Deno.stdout.write(new TextEncoder().encode(message1));
+export function stdout(message2) {
+    return Deno.stdout.write(new TextEncoder().encode(message2));
 }
-export async function stdin(accept = 1024) {
+export async function stdin(accept1 = 1024) {
     const max = 1024;
-    const buf = new Uint8Array(accept > 1024 ? accept : 1024);
+    const buf = new Uint8Array(accept1 > 1024 ? accept1 : 1024);
     const got = await Deno.stdin.read(buf);
-    return new TextDecoder().decode(buf.subarray(0, accept < got ? accept : got)).trim();
+    return new TextDecoder().decode(buf.subarray(0, accept1 < got ? accept1 : got)).trim();
 }
 export function verifyWriteTextFile(filename) {
     return async (data)=>{
@@ -1893,15 +1904,15 @@ export function verifyWriteTextFile(filename) {
     };
 }
 export function sendInput(handle) {
-    return (message1 = "")=>handle.write(new TextEncoder().encode(message1 + "\n"))
+    return (message2 = "")=>handle.write(new TextEncoder().encode(message2 + "\n"))
     ;
 }
 export function getOutput(handle) {
-    return (accept = 1024)=>async ()=>{
+    return (accept1 = 1024)=>async ()=>{
             const max = 1024;
-            const buf = new Uint8Array(accept > 1024 ? accept : 1024);
+            const buf = new Uint8Array(accept1 > 1024 ? accept1 : 1024);
             const got = await handle.read(buf);
-            return new TextDecoder().decode(buf.subarray(0, accept < got ? accept : got)).trim();
+            return new TextDecoder().decode(buf.subarray(0, accept1 < got ? accept1 : got)).trim();
         }
     ;
 }

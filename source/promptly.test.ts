@@ -4,8 +4,9 @@ import {
   assertNotStrictEquals,
   fail,
 } from "../remote/asserts.ts";
-import { Prompt, question } from "./promptly.ts";
-import { checkForErrors, configureTestProcess, strip } from "./utils.ts";
+import { Prompt } from "./promptly.ts";
+import { checkForErrors, configureTestProcess } from "./test_process.ts";
+import { strip } from "./utils.ts";
 
 const startTestProcess = configureTestProcess(
   "source/promptly.process.ts",
@@ -13,7 +14,7 @@ const startTestProcess = configureTestProcess(
 
 Deno.test({
   name: "Prompt class",
-  ignore: true,
+  ignore: false,
   async fn() {
     const message = "To be or not to be";
     const p1 = Prompt.from(message);
@@ -61,29 +62,7 @@ Deno.test({
 
 Deno.test({
   name: "Question class",
-  async fn() {
-    const message = "What I'm asking";
-    const q1 = question(message);
-    try {
-      const s1 = await q1.prompt();
-      assertEquals(s1, "dunno");
-    } catch (err) {
-      fail(err);
-    }
-    const q2 = q1
-      .validate((input) => input === "dunno")
-      .retry();
-    try {
-      const s2 = await q2.prompt();
-    } catch (err) {
-      fail(err);
-    }
-  },
-});
-
-Deno.test({
-  name: "makefile.ts :: no existing files",
-  ignore: true,
+  ignore: false,
   async fn() {
     const tp = await startTestProcess();
 
@@ -109,7 +88,7 @@ Deno.test({
 
     {
       const actual = strip(await tp.read());
-      const expected = "";
+      const expected = "What is your quest:";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
@@ -119,22 +98,13 @@ Deno.test({
 
     {
       const actual = strip(await tp.read());
-      const expected =
-        "What is your favorite color: (red, blue, green, no wait...)";
+      const expected = "What is your favorite color: (red, green, blue, ...)";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
     }
 
     await tp.write();
-
-    {
-      const actual = strip(await tp.read());
-      const expected = "Your favorite color is no wait....";
-      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
-        `got:\n\t${Deno.inspect(actual)}`;
-      assertEquals(actual, expected, message);
-    }
 
     {
       const actual = strip(await tp.read());
@@ -146,13 +116,13 @@ Deno.test({
 
     await tp.write("ahead");
 
-    {
-      const err = strip(await tp.readError());
-      const actual = err.includes("TypeError");
-      const expected = true;
-      const message = `expected TypeError, got:\n\t${Deno.inspect(err)}\n`;
-      assertEquals(actual, expected, message);
-    }
+    // {
+    //   const err = strip(await tp.readError());
+    //   const actual = err.includes("TypeError");
+    //   const expected = true;
+    //   const message = `expected TypeError, got:\n\t${Deno.inspect(err)}\n`;
+    //   assertEquals(actual, expected, message);
+    // }
 
     {
       const actual = strip(await tp.read());
@@ -164,13 +134,13 @@ Deno.test({
 
     await tp.write();
 
-    {
-      const err = strip(await tp.readError());
-      const actual = err.includes("TypeError");
-      const expected = true;
-      const message = `expected TypeError, got:\n\t${Deno.inspect(err)}\n`;
-      assertEquals(actual, expected, message);
-    }
+    // {
+    //   const err = strip(await tp.readError());
+    //   const actual = err.includes("TypeError");
+    //   const expected = true;
+    //   const message = `expected TypeError, got:\n\t${Deno.inspect(err)}\n`;
+    //   assertEquals(actual, expected, message);
+    // }
 
     {
       const actual = strip(await tp.read());
@@ -183,62 +153,13 @@ Deno.test({
     await tp.write("left");
 
     {
-      const actual = strip(await tp.read());
-      const expected = "You go left.";
-      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
-        `got:\n\t${Deno.inspect(actual)}`;
-      assertEquals(actual, expected, message);
-    }
-
-    {
-      const actual = strip(await tp.read());
-      const expected = "What is your quest:";
-      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
-        `got:\n\t${Deno.inspect(actual)}`;
-      assertEquals(actual, expected, message);
-    }
-
-    await tp.write("wut");
-
-    {
-      const err = strip(await tp.readError());
-      const actual = err.includes("TypeError");
-      const expected = true;
-      const message = `expected TypeError, got:\n\t${Deno.inspect(err)}\n`;
-      assertEquals(actual, expected, message);
-    }
-
-    {
-      const actual = strip(await tp.read());
-      const expected = "What is your quest:";
-      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
-        `got:\n\t${Deno.inspect(actual)}`;
-      assertEquals(actual, expected, message);
-    }
-
-    await tp.write("I seek the grail");
-
-    {
-      const actual = strip(await tp.read());
-      const expected = `You exclaim to the heavens: \n\n\t"I seek the grail!"`;
-      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
-        `got:\n\t${Deno.inspect(actual)}`;
-      assertEquals(actual, expected, message);
-    }
-
-    {
-      const actual = strip(await tp.read());
-      const expected = "Repository name: (Foo)";
-      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
-        `got:\n\t${Deno.inspect(actual)}`;
-      assertEquals(actual, expected, message);
-    }
-
-    await tp.write("holy_grail");
-
-    {
-      const actual = strip(await tp.read());
-      const expected = `{ name: "holy_grail" }`;
+      const actual = JSON.parse(strip(await tp.read()));
+      const expected = [
+        "Arthur, King of the",
+        '"I seek the grail!"',
+        "...",
+        "left",
+      ].sort();
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
