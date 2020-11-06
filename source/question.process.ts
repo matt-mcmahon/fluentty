@@ -1,19 +1,27 @@
 import { bgBrightYellow, bold, red, stripColor } from "../remote/colors.ts";
-import { Q, question } from "./question.ts";
+import { askYesNo, Q, question } from "./question.ts";
 
 const done = await Q(
-  question("What is your name"),
+  question("What is your name")
+    .defaultTo("Arthur, King of the Britain's!"),
   question("What is your quest")
     .retry()
-    .validate((input) => input.length > 4)
-    .format((input) => bold(bgBrightYellow(red(`"${input}!"`)))),
+    .validate(
+      (input) => /grail/i.test(input),
+      () => "Perhaps you seek the ... grail?",
+    )
+    .format((input) =>
+      bold(bgBrightYellow(red(
+        input.replace(/[\!\.\?]?$/, "!"),
+      )))
+    ),
   question("What is your favorite color")
     .accept("red", "green")
     .accept("blue")
-    .defaultTo("..."),
+    .defaultTo("blue"),
   question("Which way?")
     .acceptPartial("left", "right")
     .retry(),
 );
 
-console.log(JSON.stringify(done.map(stripColor).sort()));
+console.log(JSON.stringify(done));

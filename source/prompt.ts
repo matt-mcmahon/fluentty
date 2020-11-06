@@ -1,14 +1,20 @@
 import { brightWhite, dim } from "../remote/colors.ts";
 export { stripColor } from "../remote/colors.ts";
 
+interface GivenInputPrompt<T> {
+  (input: string, prompt: Prompt): T;
+}
+
 export class Prompt {
   message: string;
   accept?: string[];
   defaultTo?: string;
-  format?: (input: string, options: Prompt) => string;
+  format?: GivenInputPrompt<string>;
   retry?: boolean;
-  sanitize?: (input: string, options: Prompt) => string;
-  validate?: (input: string, options: Prompt) => boolean;
+  sanitize?: GivenInputPrompt<string>;
+  validate?: [GivenInputPrompt<boolean>, GivenInputPrompt<string>] | [
+    GivenInputPrompt<boolean>,
+  ];
 
   constructor(options: Prompt) {
     const {
@@ -109,11 +115,15 @@ function orSanitize(options: Prompt) {
       : input;
 }
 
-function orValidate(options: Prompt) {
+function orValidate(prompt: Prompt) {
   return async (input: string) => {
-    if (typeof options.validate === "function") {
-      return options.validate(input, options) ? input : Promise.reject(
-        new TypeError(`input ${input} failed to validate`),
+    if (prompt.validate) {
+      const [
+        validator,
+        orFailMessage = (input: string) => `input ${input} failed to validate`,
+      ] = prompt.validate;
+      return validator(input, prompt) ? input : Promise.reject(
+        new TypeError(orFailMessage(input, prompt)),
       );
     }
     return input;

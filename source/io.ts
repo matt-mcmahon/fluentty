@@ -2,6 +2,8 @@ import { exists } from "../remote/fs.ts";
 import { askYesNo } from "./question.ts";
 export { stripColor } from "../remote/colors.ts";
 
+const DEFAULT_BUFFER_SIZE = 5120;
+
 /**
  * Overwrites `filename` even if it exists, without prompting the user.
  */
@@ -33,24 +35,32 @@ export function ifNo(action: () => Promise<void>) {
   };
 }
 
+export const decodeText = (source: Deno.Reader) =>
+  async (accept = DEFAULT_BUFFER_SIZE) => {
+    const buf = new Uint8Array(accept);
+    const got = <number> await source.read(buf);
+    return new TextDecoder()
+      .decode(buf.subarray(0, accept < got ? accept : got))
+      .trim();
+  };
+
+export const encodeText = (source: Deno.Writer) =>
+  (message: string) => {
+    const buf = new TextEncoder().encode(message);
+    return source.write(buf);
+  };
+
 /**
  * Print message to stdout
+ *
+ * @returns number of bytes written
  */
-export function stdout(message: string) {
-  return Deno.stdout.write(new TextEncoder().encode(message));
-}
+export const stdout = encodeText(Deno.stdout);
 
 /**
  * Accept input from stdin.
  */
-export async function stdin(accept = 1024) {
-  const max = 1024;
-  const buf = new Uint8Array(accept > max ? accept : max);
-  const got = <number> await Deno.stdin.read(buf);
-  return new TextDecoder()
-    .decode(buf.subarray(0, accept < got ? accept : got))
-    .trim();
-}
+export const stdin = decodeText(Deno.stdin);
 
 /**
  * Ignores any input and returns Promise<void>
@@ -87,9 +97,9 @@ export function sendInput(handle: Deno.Writer & Deno.Closer) {
 
 /** _Read_ output from the given `Deno.run()` process **handle**. */
 export function getOutput(handle: Deno.Reader & Deno.Closer) {
-  return (accept = 1024) =>
+  return (accept = DEFAULT_BUFFER_SIZE) =>
     async () => {
-      const max = 1024;
+      const max = DEFAULT_BUFFER_SIZE;
       const buf = new Uint8Array(accept > max ? accept : max);
       const got = <number> await handle.read(buf);
       return new TextDecoder()

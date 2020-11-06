@@ -122,8 +122,15 @@ class Question {
    * applied. If you've set a `defaultTo` value, validate will never receive the
    * empty string.
    */
-  validate(validator: (input: string, prompt: Prompt) => boolean): Question {
-    return Question.from(this.#prompt.then(Prompt.set("validate")(validator)));
+  validate(
+    validator: (input: string, prompt: Prompt) => boolean,
+    onError?: (input: string, prompt: Prompt) => string,
+  ): Question {
+    return Question.from(
+      this.#prompt.then(
+        Prompt.set("validate")(onError ? [validator, onError] : [validator]),
+      ),
+    );
   }
 
   prompt() {

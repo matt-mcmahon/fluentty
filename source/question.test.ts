@@ -1,5 +1,5 @@
 import { assertEquals } from "../remote/asserts.ts";
-import { checkForErrors, configureTestProcess } from "./test_process.ts";
+import { configureTestProcess } from "./test_helpers.ts";
 import { strip } from "./utils.ts";
 
 const startTestProcess = configureTestProcess(
@@ -14,7 +14,7 @@ Deno.test({
 
     {
       const actual = strip(await tp.read());
-      const expected = "What is your name:";
+      const expected = "What is your name: (Arthur, King of the Britain's!)";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
@@ -44,7 +44,7 @@ Deno.test({
 
     {
       const actual = strip(await tp.read());
-      const expected = "What is your favorite color: (red, green, blue, ...)";
+      const expected = "What is your favorite color: (red, green, blue)";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
@@ -101,19 +101,11 @@ Deno.test({
     {
       const actual = JSON.parse(strip(await tp.read()));
       const expected = [
-        "Arthur, King of the",
-        '"I seek the grail!"',
-        "...",
+        "Arthur, King of the Britain's",
+        "[1m[103m[31mI seek the grail![39m[49m[22m",
+        "blue",
         "left",
-      ].sort();
-      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
-        `got:\n\t${Deno.inspect(actual)}`;
-      assertEquals(actual, expected, message);
-    }
-
-    {
-      const actual = await checkForErrors(tp);
-      const expected = "";
+      ];
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);

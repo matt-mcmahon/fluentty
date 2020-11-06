@@ -19,6 +19,7 @@
       ],
       "env": {
         "DENO_DIR": "${workspaceFolder}/.deno",
+        "RUST_BACKTRACE": "full"
       },
       "port": 9229,
       "outputCapture": "std"

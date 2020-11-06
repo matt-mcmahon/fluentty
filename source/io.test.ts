@@ -1,5 +1,14 @@
-import { configureTestProcess } from "./test_process.ts";
+import { assertEquals, fail } from "../remote/asserts.ts";
+import { configureTestProcess } from "./test_helpers.ts";
 
-const startTestProcess = configureTestProcess(
-  "source/io.process.ts",
-);
+const spawnTestProcess = configureTestProcess("source/io.process.ts");
+
+Deno.test(`io`, async () => {
+  const tp = await spawnTestProcess();
+  {
+    const actual = await tp.read();
+    const expected = `todo: write io tests`;
+    assertEquals(actual, expected);
+  }
+  await tp.end();
+});

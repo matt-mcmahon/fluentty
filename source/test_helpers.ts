@@ -1,23 +1,29 @@
 import { AssertFunction } from "../remote/asserts.ts";
-import { getOutput, sendInput } from "./io.ts";
+import { decodeText, getOutput, sendInput } from "./io.ts";
 import { JSONData, strip } from "./utils.ts";
 
-export async function checkForErrors(tp: TP) {
-  let err: string;
-  do {
-    err = strip(await tp.readError());
-    const isOkay: "okay" | "not okay" = err.startsWith("Check")
-      ? "okay"
-      : err.startsWith("Download")
-      ? "okay"
-      : err === ""
-      ? "okay"
-      : "not okay";
-    if (isOkay === "not okay") {
-      break;
-    }
-  } while (err !== "");
-  return err;
+function checkForErrors(tp: TP) {
+  return async ({ success }: Deno.ProcessStatus) => {
+    const process = tp.process;
+    const error = new TextDecoder().decode(await process.stderrOutput());
+    const ok = success && error === "";
+    return ok ? tp : Promise.reject();
+  };
+  // let err: string;
+  // do {
+  //   err = strip(await tp.readError());
+  //   const isOkay: "okay" | "not okay" = err.startsWith("Check")
+  //     ? "okay"
+  //     : err.startsWith("Download")
+  //     ? "okay"
+  //     : err === ""
+  //     ? "okay"
+  //     : "not okay";
+  //   if (isOkay === "not okay") {
+  //     break;
+  //   }
+  // } while (err !== "");
+  // return err;
 }
 
 export type TP = Readonly<{
@@ -43,15 +49,20 @@ export function configureTestProcess(script: string) {
       stdout: "piped",
     });
 
+    /**
+     * Ends the spawned process.
+     *
+     * If any error messages remain buffered when `end` is invoked, end will
+     * reject with the buffered error output as the reason.
+     *
+     */
     const end = (): Promise<void> =>
       process.status()
-        .then(({ success }) => {
-          return success ? tp : Promise.reject(process.stderrOutput());
-        })
+        .then(checkForErrors(tp))
         .then(posttest)
         .then(() => Deno.remove(tempDir, { recursive: true }))
         .finally(() => {
-          process.stderr.close();
+          // process.stderr.close(); closed stderrOutput() , above
           process.stdin.close();
           process.stdout.close();
           process.close();
