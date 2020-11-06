@@ -16,7 +16,7 @@ export { stripColor } from "../remote/colors.ts";
  *   .prompt()
  * ```
  * ```plaintext
- * > Do you want to continue (yes/no): _
+ * > Do you want to continue (𝘆𝗲𝘀/no): _
  * ```
  *
  * Not that no IO will occur until you call the `prompt()` method, which should
