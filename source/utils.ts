@@ -1,6 +1,4 @@
-import { AssertFunction } from "../remote/asserts.ts";
 import { stripColor } from "../remote/colors.ts";
-import { getOutput, sendInput } from "./promptly.ts";
 
 export const tap = <A>(fn: (a: A) => void) =>
   (a: A): A => {

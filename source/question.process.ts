@@ -1,5 +1,5 @@
 import { bgBrightYellow, bold, red, stripColor } from "../remote/colors.ts";
-import { Q, question } from "./promptly.ts";
+import { Q, question } from "./question.ts";
 
 const done = await Q(
   question("What is your name"),

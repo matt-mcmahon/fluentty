@@ -1,5 +1,5 @@
 import { AssertFunction } from "../remote/asserts.ts";
-import { getOutput, sendInput } from "./promptly.ts";
+import { getOutput, sendInput } from "./io.ts";
 import { JSONData, strip } from "./utils.ts";
 
 export async function checkForErrors(tp: TP) {

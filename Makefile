@@ -13,7 +13,7 @@ export
 #
 # DENO_DIR=
 #
-DENO_BUNDLE_FILE       ?= configure.js
+DENO_BUNDLE_FILE       ?= fluentty.js
 DENO_DEPENDENCIES_FILE ?= dependencies.ts
 DENO_DIR               ?= .deno
 DENO_MAIN              ?= module.ts

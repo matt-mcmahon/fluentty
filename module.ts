@@ -1,1 +1,1 @@
-export * from "./source/promptly.ts";
+export * from "./source/prompt.ts";
