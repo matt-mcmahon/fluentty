@@ -16,34 +16,21 @@ type PromptOptions = {
 };
 
 export class Prompt {
+  constructor({ message, ...options }: PromptOptions) {
+    Object.assign(this, options);
+    this.message = message;
+  }
+
   message: Readonly<string>;
-  retry?: Readonly<boolean>;
-  defaultTo?: Readonly<string>;
-  sanitizers: readonly MapGivenInputPrompt<string>[];
-  suggestions: readonly string[];
-  validators: readonly MapGivenInputPrompt<string | false>[];
-  formatters: readonly MapGivenInputPrompt<string>[];
+  retry: Readonly<boolean> = false;
+  defaultTo: Readonly<string | null> = null;
+  sanitizers: readonly MapGivenInputPrompt<string>[] = [];
+  suggestions: readonly string[] = [];
+  validators: readonly MapGivenInputPrompt<string | false>[] = [];
+  formatters: readonly MapGivenInputPrompt<string>[] = [];
 
   toString() {
     return `${this.message}: ${this.hint}`;
-  }
-
-  constructor({
-    message,
-    retry = false,
-    defaultTo,
-    sanitizers = [],
-    suggestions = [],
-    validators = [],
-    formatters = [],
-  }: PromptOptions) {
-    this.message = message;
-    this.retry = retry;
-    this.suggestions = suggestions;
-    this.defaultTo = defaultTo;
-    this.sanitizers = sanitizers;
-    this.validators = validators;
-    this.formatters = formatters;
   }
 
   get hint() {
@@ -57,13 +44,13 @@ export class Prompt {
     return "";
   }
 
-  invokeFormatters = (input: string) =>
+  #invokeFormatters = (input: string) =>
     this.formatters.reduce((input, f) => f(input, this), input);
 
-  invokeSanitizers = (input: string) =>
+  #invokeSanitizers = (input: string) =>
     this.sanitizers.reduce((input, f) => f(input, this), input);
 
-  invokeValidators = (input: string) => {
+  #invokeValidators = (input: string) => {
     if (this.validators.length === 0) {
       // No validators? Accept any input.
       return input;
@@ -76,7 +63,13 @@ export class Prompt {
   };
 
   validate = (input: string) =>
-    this.invokeFormatters(this.invokeValidators(this.invokeSanitizers(input)));
+    this.#invokeFormatters(
+      this.#invokeValidators(
+        this.#invokeSanitizers(
+          input,
+        ),
+      ),
+    );
 
   static from(message: string) {
     return new Prompt({ message });
