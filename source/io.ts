@@ -76,7 +76,7 @@ export function verifyWriteTextFile(filename: string) {
 
     const askOverwrite = async () =>
       askYesNo(`File ${filename} exists, overwrite`)
-        .prompt()
+        .IO()
         .then(ifYes(justCreate))
         .then(done);
 

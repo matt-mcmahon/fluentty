@@ -1,131 +1,84 @@
 import { brightWhite, dim } from "../remote/colors.ts";
 export { stripColor } from "../remote/colors.ts";
 
-interface GivenInputPrompt<T> {
+export interface MapGivenInputPrompt<T> {
   (input: string, prompt: Prompt): T;
 }
 
-export class Prompt {
-  message: string;
-  accept?: string[];
-  defaultTo?: string;
-  format?: GivenInputPrompt<string>;
+type PromptOptions = {
+  message: Readonly<string>;
   retry?: boolean;
-  sanitize?: GivenInputPrompt<string>;
-  validate?: [GivenInputPrompt<boolean>, GivenInputPrompt<string>] | [
-    GivenInputPrompt<boolean>,
-  ];
+  defaultTo?: Readonly<string>;
+  sanitizers?: readonly MapGivenInputPrompt<string>[];
+  suggestions?: readonly string[];
+  validators?: readonly MapGivenInputPrompt<string | false>[];
+  formatters?: readonly MapGivenInputPrompt<string>[];
+};
 
-  constructor(options: Prompt) {
-    const {
-      accept = [],
-      defaultTo,
-      format,
-      message,
-      retry,
-      sanitize,
-      validate,
-    } = options;
+export class Prompt {
+  message: Readonly<string>;
+  retry?: Readonly<boolean>;
+  defaultTo?: Readonly<string>;
+  sanitizers: readonly MapGivenInputPrompt<string>[];
+  suggestions: readonly string[];
+  validators: readonly MapGivenInputPrompt<string | false>[];
+  formatters: readonly MapGivenInputPrompt<string>[];
 
-    this.accept = accept;
-    this.defaultTo = defaultTo;
-    this.format = format;
+  toString() {
+    return `${this.message}: ${this.hint}`;
+  }
+
+  constructor({
+    message,
+    retry = false,
+    defaultTo,
+    sanitizers = [],
+    suggestions = [],
+    validators = [],
+    formatters = [],
+  }: PromptOptions) {
     this.message = message;
     this.retry = retry;
-    this.sanitize = sanitize;
-    this.validate = validate;
-
-    Object.freeze(this);
+    this.suggestions = suggestions;
+    this.defaultTo = defaultTo;
+    this.sanitizers = sanitizers;
+    this.validators = validators;
+    this.formatters = formatters;
   }
 
-  static set<K extends keyof Prompt>(key: K) {
-    return (value: Prompt[K]) =>
-      (options: Prompt): Prompt => ({ ...options, [key]: value });
+  get hint() {
+    const { suggestions = [], defaultTo } = this;
+    if (suggestions.length > 0) {
+      const brighten = (s: string) => s === defaultTo ? brightWhite(s) : dim(s);
+      const as = suggestions.map(brighten);
+      const list = as.length > 2 ? as.join(dim(", ")) : as.join(dim("/"));
+      return dim("(") + list + dim(") ");
+    }
+    return "";
   }
+
+  invokeFormatters = (input: string) =>
+    this.formatters.reduce((input, f) => f(input, this), input);
+
+  invokeSanitizers = (input: string) =>
+    this.sanitizers.reduce((input, f) => f(input, this), input);
+
+  invokeValidators = (input: string) => {
+    if (this.validators.length === 0) {
+      // No validators? Accept any input.
+      return input;
+    }
+
+    for (const f of this.validators) {
+      if (f(input, this) !== false) return input;
+    }
+    throw new TypeError(`"${input}" failed to validate`);
+  };
+
+  validate = (input: string) =>
+    this.invokeFormatters(this.invokeValidators(this.invokeSanitizers(input)));
 
   static from(message: string) {
     return new Prompt({ message });
   }
-
-  static check(prompt: Prompt) {
-    return (input: string) =>
-      Promise.resolve(input)
-        .then(orDefault(prompt))
-        .then(orSanitize(prompt))
-        .then(orAccept(prompt))
-        .then(orValidate(prompt))
-        .then(orFormat(prompt));
-  }
-
-  static getHint(prompt: Prompt) {
-    const { accept, defaultTo } = prompt;
-    const set = new Set(accept);
-
-    if (defaultTo) set.add(defaultTo);
-
-    const as = Array.from(set).map((s) =>
-      s === defaultTo ? brightWhite(s) : dim(s)
-    );
-
-    const hint = as.length > 2
-      ? dim("(") + as.join(dim(", ")) + dim(") ")
-      : as.length > 0
-      ? dim("(") + as.join(dim("/")) + dim(") ")
-      : "";
-
-    return hint;
-  }
-}
-
-function orAccept({ accept = [], defaultTo }: Prompt) {
-  return async (input: string) =>
-    accept.length === 0
-      ? input
-      : accept.includes(input) || input === defaultTo
-      ? input
-      : Promise.reject(
-        new TypeError(
-          `input ${input} is not default, ${defaultTo}, or in accept list [${
-            accept.map((s) => `"${s}"`).join(", ")
-          }]`,
-        ),
-      );
-}
-
-function orDefault(options: Prompt) {
-  return async (input: string) =>
-    input === "" && options.defaultTo != null
-      ? options.defaultTo
-      : input === "" && options.defaultTo == null
-      ? Promise.reject(new TypeError(`no input, no default value`))
-      : input;
-}
-
-function orFormat(options: Prompt) {
-  return async (input: string) =>
-    typeof options.format === "function"
-      ? options.format(input, options)
-      : input;
-}
-
-function orSanitize(options: Prompt) {
-  return async (input: string) =>
-    typeof options.sanitize === "function"
-      ? options.sanitize(input, options)
-      : input;
-}
-
-function orValidate(prompt: Prompt) {
-  return async (input: string) => {
-    if (prompt.validate) {
-      const [
-        validator,
-        orFailMessage = (input: string) => `input ${input} failed to validate`,
-      ] = prompt.validate;
-      return validator(input, prompt) ? input : Promise.reject(
-        new TypeError(orFailMessage(input, prompt)),
-      );
-    }
-    return input;
-  };
 }

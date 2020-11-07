@@ -14,7 +14,17 @@ Deno.test({
 
     {
       const actual = strip(await tp.read());
-      const expected = "What is your name: (Arthur, King of the Britain's!)";
+      const expected = "Do you approach the bridge of death: (yes/no)";
+      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
+        `got:\n\t${Deno.inspect(actual)}`;
+      assertEquals(actual, expected, message);
+    }
+
+    await tp.write("yes");
+
+    {
+      const actual = strip(await tp.read());
+      const expected = "What is your name:";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);

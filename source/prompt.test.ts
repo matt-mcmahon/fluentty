@@ -1,35 +1,60 @@
-import {
-  assert,
-  assertEquals,
-  assertNotStrictEquals,
-  fail,
-} from "../remote/asserts.ts";
+import { assertEquals, assertThrowsAsync, fail } from "../remote/asserts.ts";
+import { brightWhite, dim, stripColor } from "../remote/colors.ts";
 import { Prompt } from "./prompt.ts";
 
 Deno.test({
-  name: "Prompt class",
+  name: "prompts",
   ignore: false,
   async fn() {
     const message = "To be or not to be";
-    const p1 = Prompt.from(message);
+    const prompt = Prompt.from(message);
 
-    assertEquals(p1.message, message);
-    assertEquals(p1.retry === true, false, "p1 should NOT retry, #1");
+    assertEquals(prompt.message, message);
 
-    const p2 = Prompt.set("retry")(true)(p1);
+    {
+      // A prompt with zero validators should accept any input
+      const actual = prompt.validate("foo");
+      const expected = "foo";
+      assertEquals(actual, expected);
+    }
 
-    assertNotStrictEquals(p1, p2, "p1 and p2 should not be the same reference");
-    assertEquals(p1.retry === true, false, "p1 should NOT retry, #2");
-    assertEquals(p2.retry === true, true, "p2 should retry");
+    {
+      // A prompt with zero validators should accept even empty input
+      const actual = prompt.validate("");
+      const expected = "";
+      assertEquals(actual, expected);
+    }
 
-    const accept = ["be", "not be"];
-    const p3 = Prompt.set("accept")(accept)(p2);
+    const suggestions = ["be", "not be"];
+    prompt.suggestions = suggestions;
+    prompt.validators = [(input) => {
+      return suggestions.find((suggestion) => suggestion === input) ?? false;
+    }];
 
-    assertEquals(p2.accept, []);
-    assertEquals(p3.accept, accept);
+    {
+      const actual = stripColor(prompt.hint);
+      const expected = "(be/not be) ";
+      assertEquals(actual, expected);
+    }
+
+    {
+      const actual = stripColor(prompt.toString());
+      const expected = `To be or not to be: (be/not be) `;
+      assertEquals(actual, expected);
+    }
+
+    prompt.defaultTo = "be";
+
+    {
+      const actual = prompt.hint;
+      const expected = ["(", "be", "/", "not be", ") "].map(
+        (v) => v === "be" ? brightWhite(v) : dim(v),
+      ).join("");
+      assertEquals(actual, expected);
+    }
 
     try {
-      const actual = await Prompt.check(p3)("be");
+      const actual = prompt.validate("be");
       const expected = "be";
       assertEquals(actual, expected);
     } catch (err) {
@@ -37,19 +62,16 @@ Deno.test({
     }
 
     try {
-      const actual = await Prompt.check(p3)("not be");
+      const actual = prompt.validate("not be");
       const expected = "not be";
       assertEquals(actual, expected);
     } catch (err) {
       fail(err);
     }
 
-    try {
-      const actual = await Prompt.check(p3)("junk");
-      const expected = "junk";
-      assertEquals(actual, expected);
-    } catch (err) {
-      assert(err instanceof TypeError, "should fail with a TypeError");
-    }
+    assertThrowsAsync(async () => {
+      prompt.validate("junk");
+      fail("should throw before this point");
+    }, TypeError);
   },
 });
