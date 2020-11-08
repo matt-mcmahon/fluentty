@@ -18,87 +18,101 @@ const validateDefaultTo = (defaultTo: string) =>
 
 const setDefaultTo = (defaultTo: string) =>
   ({ validators = [], suggestions, ...prompt }: Prompt) =>
-    new Prompt({
+    Prompt.of({
       ...prompt,
       defaultTo,
       suggestions: [...new Set([...suggestions, defaultTo])],
       validators: [...validators, validateDefaultTo(defaultTo)],
     });
 
-const setRetry = (value = true) =>
-  (prompt: Prompt) =>
-    new Prompt({
-      ...prompt,
-      retry: value,
-    });
+const setRetry = (retry = true) =>
+  (prompt: Prompt) => Prompt.of(prompt, { retry });
 
 const addFormatters = (...additions: MapIP<string>[]) =>
   ({ formatters: current = [], ...prompt }: Prompt) =>
-    new Prompt({
-      ...prompt,
-      formatters: [...current, ...additions],
-    });
+    Prompt.of({ ...prompt, formatters: [...current, ...additions] });
 
 const addSanitizers = (...additions: MapIP<string>[]) =>
   ({ sanitizers: current = [], ...prompt }: Prompt) =>
-    new Prompt({
-      ...prompt,
-      sanitizers: [...current, ...additions],
-    });
+    Prompt.of({ ...prompt, sanitizers: [...current, ...additions] });
 
-const addSuggests = (
-  match: Matcher<string | false>,
-  ...suggestions: string[]
-) =>
-  (prompt: Prompt) =>
-    new Prompt({
-      ...prompt,
-      suggestions: [...prompt.suggestions, ...suggestions],
-      validators: [...prompt.validators, match(...suggestions)],
-    });
+const addSuggestions = (...suggestions: string[]) =>
+  (validator: MapIP<string | false>) =>
+    ({ suggestions: cs = [], validators: cv = [], ...prompt }: Prompt) =>
+      Prompt.of({
+        ...prompt,
+        suggestions: [...cs, ...suggestions],
+        validators: [...cv, validator],
+      });
 
 const addAccepts = (
   match: Matcher<string | false>,
   ...accepts: string[]
 ) =>
   (prompt: Prompt) =>
-    new Prompt({
+    Prompt.of({
       ...prompt,
       validators: [...prompt.validators, match(...accepts)],
     });
 
-const match = (prompt: Prompt) =>
-  (suggest = true) =>
-    (ignoreCase = false) =>
-      (partial = false) =>
-        (...options: string[]) => {
-          const validator = (input: string) => {
-            const flags = ignoreCase ? "i" : "";
-            const full = new RegExp(`^${input}$`, flags);
-            const init = new RegExp(`^${input}`, flags);
-            const maybe: string[] = [];
-            for (const option in options) {
-              if (full.test(option)) {
-                return option;
-              } else if (partial && init.test(option)) {
-                maybe.push(option);
-              }
-            }
-            return maybe.length === 1 ? maybe[1] : false;
-          };
-          const suggestions = suggest
-            ? [...prompt.suggestions, ...options]
-            : [...prompt.suggestions];
-          return new Prompt({
-            ...prompt,
-            suggestions,
-            validators: [...prompt.validators, validator],
-          });
-        };
+const match = () => new Match();
+
+class Match {
+  #prompt: Promise<Prompt>;
+  #options: string[]
+  flags: "" | "i";
+  strategy: (option: string) => string;
+
+  #full = (option: string) => `^${option}$`;
+  #init = (option: string) => `^${option}`;
+
+  constructor(prompt: Promise<Prompt>, ...options: string[]) {
+    this.#options = options
+    this.#prompt = prompt;
+    this.flags = "";
+    this.strategy = this.#full;
+  }
+
+  ignoreCase() {
+    this.flags = "i";
+    return this;
+  }
+
+  matchCase() {
+    this.flags = "";
+    return this;
+  }
+
+  matchFullPhrase() {
+    this.strategy = this.#full;
+    return this;
+  }
+
+  matchInitPhrase() {
+    this.strategy = this.#init;
+    return this;
+  }
+
+  done() {
+    const makeValidator = (option: string) =>
+      (input: string) => {
+        const re = new RegExp(this.strategy(option), this.flags);
+        return re.test(input) ? option : false;
+      };
+    return (prompt: Prompt) => {
+      Prompt.of(
+        {
+          ...prompt,
+          validators: [...prompt.validators, ...this.#options.map(makeValidator)],
+        },
+      );
+    };
+  }
+}
 
 const addValidators = (...additions: MapIP<string | false>[]) =>
   ({ validators: current = [], ...prompt }: Prompt) =>
-    new Prompt({
+    Prompt.of({
       ...prompt,
       validators: [...current, ...additions],
     });
@@ -139,21 +153,8 @@ class Question {
    * Adds one or more strings as valid (i.e. acceptable) input, but does not add
    * these strings to the prompt's hint.
    */
-  accept(...suggestions: string[]) {
-    const prompt = this.#prompt;
-    return {
-      matchCase(yes = true) {
-        return {
-          matchAll(all = true) {
-            return Question.from(
-              prompt.then((prompt) =>
-                match(prompt)(false)(!yes)(!all)(...suggestions)
-              ),
-            );
-          },
-        };
-      },
-    };
+  accept(...options: string[]) {
+    return new Match(this.#prompt, options: string[]);
   }
 
   /**

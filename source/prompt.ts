@@ -89,4 +89,11 @@ export class Prompt {
   static from(message: string) {
     return new Prompt({ message });
   }
+
+  static of(p1: PromptOptions, ...prompts: Partial<PromptOptions>[]) {
+    return new Prompt({
+      ...p1,
+      ...prompts.reduce((a, b) => ({ ...a, ...b })),
+    });
+  }
 }
