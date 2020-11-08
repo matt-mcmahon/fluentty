@@ -62,7 +62,7 @@ define print-header
 	@echo
 endef
 
-all: install lint build test
+all: install lint test build
 
 ifneq ($(LOCK_FILE),)
 $(LOCK_FILE): $(REMOTE_DEPENDENCIES) $(DENO_DEPENDENCIES_FILE)
