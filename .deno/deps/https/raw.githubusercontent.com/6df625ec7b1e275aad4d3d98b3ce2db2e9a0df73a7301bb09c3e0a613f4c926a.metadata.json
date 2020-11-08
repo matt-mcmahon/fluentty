@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "strict-transport-security": "max-age=31536000",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "source-age": "155",
+    "date": "Sun, 08 Nov 2020 02:17:15 GMT",
+    "x-cache": "MISS, HIT",
+    "x-frame-options": "deny",
+    "x-github-request-id": "B67E:2FBE:108233:12C866:5FA74A32",
+    "content-type": "text/plain; charset=utf-8",
+    "x-xss-protection": "1; mode=block",
+    "x-served-by": "cache-wdc5573-WDC",
+    "accept-ranges": "bytes",
+    "x-timer": "S1604801836.572267,VS0,VE0",
+    "vary": "Authorization,Accept-Encoding",
+    "x-content-type-options": "nosniff",
+    "connection": "keep-alive",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "x-cache-hits": "0, 1",
+    "etag": "W/\"3cf740956474c53f08a6054f610c8de6bbe2c442cf3b0f3348716a9938b32e91\"",
+    "expires": "Sun, 08 Nov 2020 02:22:15 GMT",
+    "access-control-allow-origin": "*",
+    "x-fastly-request-id": "86c3b4a67e5c0f1eb3f1c7b6134005a4e74f7d29",
+    "cache-control": "max-age=300"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/describe/master/source/lib/test-framework.ts"
+}

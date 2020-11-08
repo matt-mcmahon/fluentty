@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "x-fastly-request-id": "3c34be2115315c064fb78fec5efcec6fa984afda",
+    "vary": "Authorization,Accept-Encoding",
+    "x-timer": "S1604801836.728317,VS0,VE1",
+    "strict-transport-security": "max-age=31536000",
+    "etag": "W/\"c0d622107efb81e4ab9b7b728eae67ac4e9be18b452c9c8475ff0b35e425fba0\"",
+    "x-xss-protection": "1; mode=block",
+    "x-github-request-id": "52B0:502A:107ECC:12BB3B:5FA74A31",
+    "connection": "keep-alive",
+    "content-type": "text/plain; charset=utf-8",
+    "date": "Sun, 08 Nov 2020 02:17:15 GMT",
+    "access-control-allow-origin": "*",
+    "expires": "Sun, 08 Nov 2020 02:22:15 GMT",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "x-served-by": "cache-wdc5542-WDC",
+    "cache-control": "max-age=300",
+    "x-content-type-options": "nosniff",
+    "source-age": "155",
+    "x-cache": "MISS, HIT",
+    "accept-ranges": "bytes",
+    "x-cache-hits": "0, 1",
+    "x-frame-options": "deny"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/describe/master/source/lib/remote/asserts.ts"
+}
