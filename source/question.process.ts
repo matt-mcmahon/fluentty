@@ -28,7 +28,14 @@ const questions = [
     )
     .retry(),
   question("Accept partial, full match")
-    .matchLoosely("Sir", "Sir not Appearing in this Film")
+    .suggestLoose(
+      "Sir Lancelot the Brave",
+      "Sir Robin the Not-Quite-So-Brave-as-Sir-Lancelot",
+      "Sir Bedevere the Wise",
+      "Sir Galahad the Pure",
+      "Sir Bors",
+      "Sir not Appearing in this Film",
+    )
     .retry(),
 ];
 
