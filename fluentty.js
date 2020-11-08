@@ -49,7 +49,7 @@ export class Prompt {
         this.validators = validators;
     }
     toString() {
-        return `${this.message}: ${this.hint}`;
+        return `${this.message} ${this.hint}`;
     }
     get hint() {
         const { suggestions: suggestions1 = [] , defaultTo: defaultTo1  } = this;
@@ -78,11 +78,19 @@ export class Prompt {
         }
         throw new TypeError(`"${input}" failed to validate`);
     };
-    validate = (input)=>this.#invokeFormatters(this.#invokeValidators(this.#invokeSanitizers(input)))
-    ;
+    validate = (input)=>{
+        const sanitized = this.#invokeSanitizers(input);
+        const validated = this.#invokeValidators(sanitized);
+        return this.#invokeFormatters(validated);
+    };
     static from(message) {
         return new Prompt({
             message
+        });
+    }
+    static of(prompt) {
+        return new Prompt({
+            ...prompt
         });
     }
 }
@@ -91,15 +99,9 @@ const doIO = (prompt)=>stdout(`${prompt}`).then(stdin()).then((input)=>prompt.va
         return prompt.retry ? doIO(prompt) : Promise.reject(reason);
     })
 ;
-const exactMatch = (input)=>(option)=>input === option
+const validateDefaultTo = (defaultTo1)=>(input)=>input === "" && defaultTo1
 ;
-const partialMatch = (input)=>(option)=>option.startsWith(input)
-;
-const insensitive = (matchStrategy)=>(input)=>(option)=>matchStrategy(input.toLocaleLowerCase())(option.toLocaleLowerCase())
-;
-const validateDefaultTo = (defaultTo1)=>(input)=>input === "" ? defaultTo1 : false
-;
-const setDefaultTo = (defaultTo1)=>({ validators: validators1 = [] , suggestions: suggestions1 , ...prompt })=>new Prompt({
+const setDefaultTo = (defaultTo1)=>({ validators: validators1 = [] , suggestions: suggestions1 , ...prompt })=>Prompt.of({
             ...prompt,
             defaultTo: defaultTo1,
             suggestions: [
@@ -114,12 +116,12 @@ const setDefaultTo = (defaultTo1)=>({ validators: validators1 = [] , suggestions
             ]
         })
 ;
-const setRetry = (value = true)=>(prompt)=>new Prompt({
+const setRetry = (retry1 = true)=>(prompt)=>Prompt.of({
             ...prompt,
-            retry: value
+            retry: retry1
         })
 ;
-const addFormatters = (...additions)=>({ formatters: current = [] , ...prompt })=>new Prompt({
+const addFormatters = (...additions)=>({ formatters: current = [] , ...prompt })=>Prompt.of({
             ...prompt,
             formatters: [
                 ...current,
@@ -127,7 +129,7 @@ const addFormatters = (...additions)=>({ formatters: current = [] , ...prompt })
             ]
         })
 ;
-const addSanitizers = (...additions)=>({ sanitizers: current = [] , ...prompt })=>new Prompt({
+const addSanitizers = (...additions)=>({ sanitizers: current = [] , ...prompt })=>Prompt.of({
             ...prompt,
             sanitizers: [
                 ...current,
@@ -135,51 +137,53 @@ const addSanitizers = (...additions)=>({ sanitizers: current = [] , ...prompt })
             ]
         })
 ;
-const addExactSuggestions = (...additions)=>(prompt)=>{
-        const match = exactMatch;
-        const validate = (input)=>additions.find(exactMatch(input)) ?? false
-        ;
-        return new Prompt({
-            ...prompt,
-            suggestions: [
-                ...prompt.suggestions,
-                ...additions
-            ],
-            validators: [
-                ...prompt.validators,
-                validate
-            ]
-        });
+class Match {
+    #prompt;
+    #options;
+    constructor(prompt1, ...options){
+        this.#options = options;
+        this.#prompt = prompt1;
     }
-;
-const addLooseSuggestions = (...additions)=>(prompt)=>{
-        const match = insensitive(partialMatch);
-        const validate = (input)=>{
+    matchCase = ()=>this.#configureMatch("")
+    ;
+    ignoreCase = ()=>this.#configureMatch("i")
+    ;
+    #configureMatch=(flags)=>{
+        return {
+            matchFull: ()=>this.#done(flags, "full")
+            ,
+            matchInitial: ()=>this.#done(flags, "init")
+            ,
+            matchPartial: ()=>this.#done(flags, "part")
+        };
+    };
+    #done=(flags, match)=>{
+        const options1 = this.#options;
+        const prompt1 = this.#prompt;
+        const validator = (input)=>{
             const maybes = [];
-            for (const option of additions){
-                if (input.toLocaleLowerCase() === option.toLocaleLowerCase()) {
-                    return option;
-                } else if (match(input)(option)) {
-                    maybes.push(option);
-                }
+            const full = new RegExp(`^${input}$`, flags);
+            const init = new RegExp(`^${input}`, flags);
+            const part = new RegExp(`${input}`, flags);
+            for (const option of options1){
+                if (full.test(option)) return option;
+                if (match === "init" && init.test(option)) maybes.push(option);
+                if (match === "part" && part.test(option)) maybes.push(option);
             }
             return maybes.length === 1 ? maybes[0] : false;
         };
-        return new Prompt({
-            ...prompt,
-            suggestions: [
-                ...prompt.suggestions,
-                ...additions
-            ],
-            validators: [
-                ...prompt.validators,
-                validate
-            ]
-        });
-    }
-;
-const addValidators = (...additions)=>({ validators: current = [] , ...prompt })=>new Prompt({
-            ...prompt,
+        return Question.from(prompt1.then((prompt2)=>Prompt.of({
+                ...prompt2,
+                validators: [
+                    ...prompt2.validators,
+                    validator, 
+                ]
+            })
+        ));
+    };
+}
+const addValidators = (...additions)=>({ validators: current = [] , ...prompt1 })=>Prompt.of({
+            ...prompt1,
             validators: [
                 ...current,
                 ...additions
@@ -194,10 +198,20 @@ class Question {
     static from(prompt) {
         return new Question(Promise.resolve(prompt));
     }
-    matchExactly = (...suggestions1)=>Question.from(this.#prompt.then(addExactSuggestions(...suggestions1)))
-    ;
-    matchLoosely = (...suggestions1)=>Question.from(this.#prompt.then(addLooseSuggestions(...suggestions1)))
-    ;
+    accept = (...options1)=>{
+        return new Match(this.#prompt, ...options1);
+    };
+    suggest = (...suggestions1)=>{
+        const prompt2 = this.#prompt.then(({ suggestions: current , ...prompt3 })=>Prompt.of({
+                ...prompt3,
+                suggestions: Array.from(new Set([
+                    ...current,
+                    ...suggestions1
+                ]))
+            })
+        );
+        return new Match(prompt2, ...suggestions1);
+    };
     defaultTo = (value1)=>Question.from(this.#prompt.then(setDefaultTo(value1)))
     ;
     format = (formatter)=>Question.from(this.#prompt.then(addFormatters(formatter)))
@@ -215,7 +229,7 @@ function question(message2) {
     return Question.from(Prompt.from(message2));
 }
 function askYesNo(message2) {
-    return question(message2).matchLoosely("yes", "no").retry();
+    return question(message2).suggest("yes", "no").ignoreCase().matchInitial().retry();
 }
 let NATIVE_OS = "linux";
 const navigator = globalThis.navigator;
@@ -1488,7 +1502,7 @@ function comparePath(a, b) {
     return 0;
 }
 const isWindows2 = Deno.build.os === "windows";
-async function ensureValidCopy(src, dest, options, isCopyFolder = false) {
+async function ensureValidCopy(src, dest, options1, isCopyFolder = false) {
     let destStat;
     try {
         destStat = await Deno.lstat(dest);
@@ -1501,12 +1515,12 @@ async function ensureValidCopy(src, dest, options, isCopyFolder = false) {
     if (isCopyFolder && !destStat.isDirectory) {
         throw new Error(`Cannot overwrite non-directory '${dest}' with directory '${src}'.`);
     }
-    if (!options.overwrite) {
+    if (!options1.overwrite) {
         throw new Error(`'${dest}' already exists.`);
     }
     return destStat;
 }
-function ensureValidCopySync(src, dest, options, isCopyFolder = false) {
+function ensureValidCopySync(src, dest, options1, isCopyFolder = false) {
     let destStat;
     try {
         destStat = Deno.lstatSync(dest);
@@ -1519,33 +1533,33 @@ function ensureValidCopySync(src, dest, options, isCopyFolder = false) {
     if (isCopyFolder && !destStat.isDirectory) {
         throw new Error(`Cannot overwrite non-directory '${dest}' with directory '${src}'.`);
     }
-    if (!options.overwrite) {
+    if (!options1.overwrite) {
         throw new Error(`'${dest}' already exists.`);
     }
     return destStat;
 }
-async function copyFile(src, dest, options) {
-    await ensureValidCopy(src, dest, options);
+async function copyFile(src, dest, options1) {
+    await ensureValidCopy(src, dest, options1);
     await Deno.copyFile(src, dest);
-    if (options.preserveTimestamps) {
+    if (options1.preserveTimestamps) {
         const statInfo = await Deno.stat(src);
         assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
         assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         await Deno.utime(dest, statInfo.atime, statInfo.mtime);
     }
 }
-function copyFileSync(src, dest, options) {
-    ensureValidCopySync(src, dest, options);
+function copyFileSync(src, dest, options1) {
+    ensureValidCopySync(src, dest, options1);
     Deno.copyFileSync(src, dest);
-    if (options.preserveTimestamps) {
+    if (options1.preserveTimestamps) {
         const statInfo = Deno.statSync(src);
         assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
         assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         Deno.utimeSync(dest, statInfo.atime, statInfo.mtime);
     }
 }
-async function copySymLink(src, dest, options) {
-    await ensureValidCopy(src, dest, options);
+async function copySymLink(src, dest, options1) {
+    await ensureValidCopy(src, dest, options1);
     const originSrcFilePath = await Deno.readLink(src);
     const type = getFileInfoType(await Deno.lstat(src));
     if (isWindows2) {
@@ -1555,15 +1569,15 @@ async function copySymLink(src, dest, options) {
     } else {
         await Deno.symlink(originSrcFilePath, dest);
     }
-    if (options.preserveTimestamps) {
+    if (options1.preserveTimestamps) {
         const statInfo = await Deno.lstat(src);
         assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
         assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         await Deno.utime(dest, statInfo.atime, statInfo.mtime);
     }
 }
-function copySymlinkSync(src, dest, options) {
-    ensureValidCopySync(src, dest, options);
+function copySymlinkSync(src, dest, options1) {
+    ensureValidCopySync(src, dest, options1);
     const originSrcFilePath = Deno.readLinkSync(src);
     const type = getFileInfoType(Deno.lstatSync(src));
     if (isWindows2) {
@@ -1573,19 +1587,19 @@ function copySymlinkSync(src, dest, options) {
     } else {
         Deno.symlinkSync(originSrcFilePath, dest);
     }
-    if (options.preserveTimestamps) {
+    if (options1.preserveTimestamps) {
         const statInfo = Deno.lstatSync(src);
         assert(statInfo.atime instanceof Date, `statInfo.atime is unavailable`);
         assert(statInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
         Deno.utimeSync(dest, statInfo.atime, statInfo.mtime);
     }
 }
-async function copyDir(src, dest, options) {
-    const destStat = await ensureValidCopy(src, dest, options, true);
+async function copyDir(src, dest, options1) {
+    const destStat = await ensureValidCopy(src, dest, options1, true);
     if (!destStat) {
         await ensureDir(dest);
     }
-    if (options.preserveTimestamps) {
+    if (options1.preserveTimestamps) {
         const srcStatInfo = await Deno.stat(src);
         assert(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
         assert(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
@@ -1595,20 +1609,20 @@ async function copyDir(src, dest, options) {
         const srcPath = join(src, entry.name);
         const destPath = join(dest, basename(srcPath));
         if (entry.isSymlink) {
-            await copySymLink(srcPath, destPath, options);
+            await copySymLink(srcPath, destPath, options1);
         } else if (entry.isDirectory) {
-            await copyDir(srcPath, destPath, options);
+            await copyDir(srcPath, destPath, options1);
         } else if (entry.isFile) {
-            await copyFile(srcPath, destPath, options);
+            await copyFile(srcPath, destPath, options1);
         }
     }
 }
-function copyDirSync(src, dest, options) {
-    const destStat = ensureValidCopySync(src, dest, options, true);
+function copyDirSync(src, dest, options1) {
+    const destStat = ensureValidCopySync(src, dest, options1, true);
     if (!destStat) {
         ensureDirSync(dest);
     }
-    if (options.preserveTimestamps) {
+    if (options1.preserveTimestamps) {
         const srcStatInfo = Deno.statSync(src);
         assert(srcStatInfo.atime instanceof Date, `statInfo.atime is unavailable`);
         assert(srcStatInfo.mtime instanceof Date, `statInfo.mtime is unavailable`);
@@ -1619,11 +1633,11 @@ function copyDirSync(src, dest, options) {
         const srcPath = join(src, entry.name);
         const destPath = join(dest, basename(srcPath));
         if (entry.isSymlink) {
-            copySymlinkSync(srcPath, destPath, options);
+            copySymlinkSync(srcPath, destPath, options1);
         } else if (entry.isDirectory) {
-            copyDirSync(srcPath, destPath, options);
+            copyDirSync(srcPath, destPath, options1);
         } else if (entry.isFile) {
-            copyFileSync(srcPath, destPath, options);
+            copyFileSync(srcPath, destPath, options1);
         }
     }
 }
