@@ -6,7 +6,7 @@ Deno.test({
   name: "prompts",
   ignore: false,
   async fn() {
-    const message = "To be or not to be";
+    const message = "To be or not to be:";
     const prompt = Prompt.from(message);
 
     assertEquals(prompt.message, message);
@@ -71,7 +71,6 @@ Deno.test({
 
     assertThrowsAsync(async () => {
       prompt.validate("junk");
-      fail("should throw before this point");
     }, TypeError);
   },
 });

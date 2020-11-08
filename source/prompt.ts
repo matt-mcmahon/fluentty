@@ -1,17 +1,25 @@
 import { brightWhite, dim } from "../remote/colors.ts";
 
-export interface MapGivenInputPrompt<T> {
-  (input: string, prompt: Prompt): T;
+export interface Validator {
+  (input: string, prompt: Prompt): string | false;
+}
+
+export interface Sanitizer {
+  (input: string, prompt: Prompt): string;
+}
+
+export interface Formatter {
+  (input: string, prompt: Prompt): string;
 }
 
 type PromptOptions = {
   defaultTo?: Readonly<string | null>;
-  formatters?: readonly MapGivenInputPrompt<string>[];
+  formatters?: readonly Formatter[];
   message: Readonly<string>;
   retry?: boolean;
-  sanitizers?: readonly MapGivenInputPrompt<string>[];
+  sanitizers?: readonly Sanitizer[];
   suggestions?: readonly string[];
-  validators?: readonly MapGivenInputPrompt<string | false>[];
+  validators?: readonly Validator[];
 };
 
 export class Prompt {
@@ -34,15 +42,15 @@ export class Prompt {
   }
 
   defaultTo: Readonly<string | null>;
-  formatters: readonly MapGivenInputPrompt<string>[];
+  formatters: readonly Formatter[];
   message: Readonly<string>;
   retry: Readonly<boolean>;
-  sanitizers: readonly MapGivenInputPrompt<string>[];
+  sanitizers: readonly Sanitizer[];
   suggestions: readonly string[];
-  validators: readonly MapGivenInputPrompt<string | false>[];
+  validators: readonly Validator[];
 
   toString() {
-    return `${this.message}: ${this.hint}`;
+    return `${this.message} ${this.hint}`;
   }
 
   get hint() {
@@ -77,16 +85,17 @@ export class Prompt {
     throw new TypeError(`"${input}" failed to validate`);
   };
 
-  validate = (input: string) =>
-    this.#invokeFormatters(
-      this.#invokeValidators(
-        this.#invokeSanitizers(
-          input,
-        ),
-      ),
-    );
+  validate = (input: string) => {
+    const sanitized = this.#invokeSanitizers(input);
+    const validated = this.#invokeValidators(sanitized);
+    return this.#invokeFormatters(validated);
+  };
 
   static from(message: string) {
     return new Prompt({ message });
+  }
+
+  static of(prompt: PromptOptions) {
+    return new Prompt({ ...prompt });
   }
 }
