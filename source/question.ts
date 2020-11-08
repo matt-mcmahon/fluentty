@@ -67,22 +67,34 @@ const addAccepts = (
       validators: [...prompt.validators, match(...accepts)],
     });
 
-const match = (ignoreCase = false, partial = false): Matcher<string | false> =>
-  (...options: string[]) =>
-    (input: string, prompt: Prompt) => {
-      const flags = ignoreCase ? "i" : "";
-      const full = new RegExp(`^${input}$`, flags);
-      const init = new RegExp(`^${input}`, flags);
-      const maybe: string[] = [];
-      for (const option in options) {
-        if (full.test(option)) {
-          return option;
-        } else if (partial && init.test(option)) {
-          maybe.push(option);
-        }
-      }
-      return maybe.length === 1 ? maybe[1] : false;
-    };
+const match = (prompt: Prompt) =>
+  (suggest = true) =>
+    (ignoreCase = false) =>
+      (partial = false) =>
+        (...options: string[]) => {
+          const validator = (input: string) => {
+            const flags = ignoreCase ? "i" : "";
+            const full = new RegExp(`^${input}$`, flags);
+            const init = new RegExp(`^${input}`, flags);
+            const maybe: string[] = [];
+            for (const option in options) {
+              if (full.test(option)) {
+                return option;
+              } else if (partial && init.test(option)) {
+                maybe.push(option);
+              }
+            }
+            return maybe.length === 1 ? maybe[1] : false;
+          };
+          const suggestions = suggest
+            ? [...prompt.suggestions, ...options]
+            : [...prompt.suggestions];
+          return new Prompt({
+            ...prompt,
+            suggestions,
+            validators: [...prompt.validators, validator],
+          });
+        };
 
 const addValidators = (...additions: MapIP<string | false>[]) =>
   ({ validators: current = [], ...prompt }: Prompt) =>
@@ -127,31 +139,43 @@ class Question {
    * Adds one or more strings as valid (i.e. acceptable) input, but does not add
    * these strings to the prompt's hint.
    */
-  accept = ({
-    ignoreCase = false,
-    partial = false,
-    suggestions,
-  }: {
-    ignoreCase: boolean;
-    partial: boolean;
-    suggestions: string[];
-  }) =>
-    Question.from(
-      this.#prompt.then(
-        addAccepts(match(ignoreCase, partial), ...suggestions),
-      ),
-    );
+  accept(...suggestions: string[]) {
+    const prompt = this.#prompt;
+    return {
+      matchCase(yes = true) {
+        return {
+          matchAll(all = true) {
+            return Question.from(
+              prompt.then((prompt) =>
+                match(prompt)(false)(!yes)(!all)(...suggestions)
+              ),
+            );
+          },
+        };
+      },
+    };
+  }
 
   /**
    * Adds one or more strings as valid (i.e. acceptable) input, and suggests
    * them in the prompt's hint.
    */
-  suggest = (ignoreCase = false, partial = false, ...suggestions: string[]) =>
-    Question.from(
-      this.#prompt.then(
-        addSuggests(match(ignoreCase, partial), ...suggestions),
-      ),
-    );
+  suggest(...suggestions: string[]) {
+    const prompt = this.#prompt;
+    return {
+      matchCase(yes = true) {
+        return {
+          matchAll(all = true) {
+            return Question.from(
+              prompt.then((prompt) =>
+                match(prompt)(true)(!yes)(!all)(...suggestions)
+              ),
+            );
+          },
+        };
+      },
+    };
+  }
 
   /**
    * Set a default value for when the user provides no input. Replaces before
@@ -210,7 +234,9 @@ export function question(message: string) {
  */
 export function askYesNo(message: string): Question {
   return question(message)
-    .suggest(true, true)("yes", "no")
+    .suggest("yes", "no")
+    .matchCase(false)
+    .matchAll(false)
     .retry();
 }
 
