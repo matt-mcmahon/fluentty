@@ -14,7 +14,49 @@ Deno.test({
 
     {
       const actual = strip(await tp.read());
-      const expected = "Do you approach the bridge of death: (yes/no)";
+      const expected = "Choose your Knight:";
+      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
+        `got:\n\t${Deno.inspect(actual)}`;
+      assertEquals(actual, expected, message);
+    }
+
+    await tp.write("sir");
+
+    {
+      const actual = strip(await tp.read());
+      const expected = "Choose your Knight:";
+      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
+        `got:\n\t${Deno.inspect(actual)}`;
+      assertEquals(actual, expected, message);
+    }
+
+    await tp.write("lance");
+
+    {
+      const actual = strip(await tp.read());
+      const expected = "Choose your Knight:";
+      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
+        `got:\n\t${Deno.inspect(actual)}`;
+      assertEquals(actual, expected, message);
+    }
+
+    await tp.write("sir l");
+
+    {
+      const actual = strip(await tp.read());
+      const expected = "Sir Lancelot the Brave" +
+        ", do you approach the bridge of death? (yes/no)";
+      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
+        `got:\n\t${Deno.inspect(actual)}`;
+      assertEquals(actual, expected, message);
+    }
+
+    await tp.write();
+
+    {
+      const actual = strip(await tp.read());
+      const expected = "Sir Lancelot the Brave" +
+        ", do you approach the bridge of death? (yes/no)";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
@@ -24,76 +66,63 @@ Deno.test({
 
     {
       const actual = strip(await tp.read());
-      const expected = "What is your name:";
+      const expected = "What is your name?";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
     }
 
-    await tp.write("Arthur, King of the Britains");
+    await tp.write("lancelot");
 
     {
       const actual = strip(await tp.read());
-      const expected = "What is your quest:";
+      const expected = "What is your quest?";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
     }
 
-    await tp.write("wut");
+    await tp.write("I seek a shrubbery!");
 
     {
       const actual = strip(await tp.read());
-      const expected = "What is your quest:";
+      const expected = "What is your quest?";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
     }
 
-    await tp.write("I seek the grail");
+    await tp.write("I seek the grail?");
 
     {
       const actual = strip(await tp.read());
-      const expected = "What is your favorite color: (red, green, blue)";
+      const expected = "What is your favorite color? (red/green)";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
     }
 
-    await tp.write("red");
+    await tp.write("blue");
 
     {
       const actual = strip(await tp.read());
-      const expected = "African or European: (African/European)";
+      const expected = "African or European?";
       const message = `expected:\n\t${Deno.inspect(expected)}\n` +
         `got:\n\t${Deno.inspect(actual)}`;
       assertEquals(actual, expected, message);
     }
 
-    await tp.write("a");
-
-    {
-      const actual = strip(await tp.read());
-      const expected =
-        "Accept partial, full match: (Sir/Sir not Appearing in this Film)";
-      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
-        `got:\n\t${Deno.inspect(actual)}`;
-      assertEquals(actual, expected, message);
-    }
-
-    await tp.write("sir");
+    await tp.write("e");
 
     {
       const data = strip(await tp.read());
       try {
         const actual = JSON.parse(data);
         const expected = [
-          "yes",
-          "Arthur, King of the Britains",
+          "Sir Lancelot the Brave",
           "I seek the grail!",
-          "[31m%s[39m",
-          "African",
-          "Sir",
+          "\u001b[34mblue\u001b[39m",
+          "European",
         ];
         const message = `expected:\n\t${Deno.inspect(expected)}\n` +
           `got:\n\t${Deno.inspect(actual)}`;

@@ -1,9 +1,5 @@
 import { stdin, stdout } from "./io.ts";
-import { MapGivenInputPrompt as MapIP, Prompt } from "./prompt.ts";
-
-export interface Matcher {
-  (input: string): (option: string) => boolean;
-}
+import { Formatter, Prompt, Sanitizer, Validator } from "./prompt.ts";
 
 const doIO = (prompt: Prompt) =>
   stdout(`${prompt}`)
@@ -13,88 +9,81 @@ const doIO = (prompt: Prompt) =>
       return prompt.retry ? doIO(prompt) : Promise.reject(reason);
     });
 
-const exactMatch: Matcher = (input: string) =>
-  (option: string) => input === option;
-
-const partialMatch: Matcher = (input: string) =>
-  (option: string) => option.startsWith(input);
-
-const insensitive = (matchStrategy: Matcher) =>
-  (input: string) =>
-    (option: string) =>
-      matchStrategy(input.toLocaleLowerCase())(option.toLocaleLowerCase());
-
-const validateDefaultTo = (defaultTo: string) =>
-  (input: string) => input === "" ? defaultTo : false;
+const validateDefaultTo = (defaultTo: string): Validator =>
+  (input: string) => input === "" && defaultTo;
 
 const setDefaultTo = (defaultTo: string) =>
   ({ validators = [], suggestions, ...prompt }: Prompt) =>
-    new Prompt({
+    Prompt.of({
       ...prompt,
       defaultTo,
       suggestions: [...new Set([...suggestions, defaultTo])],
       validators: [...validators, validateDefaultTo(defaultTo)],
     });
 
-const setRetry = (value = true) =>
-  (prompt: Prompt) =>
-    new Prompt({
-      ...prompt,
-      retry: value,
-    });
+const setRetry = (retry = true) =>
+  (prompt: Prompt) => Prompt.of({ ...prompt, retry });
 
-const addFormatters = (...additions: MapIP<string>[]) =>
+const addFormatters = (...additions: Formatter[]) =>
   ({ formatters: current = [], ...prompt }: Prompt) =>
-    new Prompt({
-      ...prompt,
-      formatters: [...current, ...additions],
-    });
+    Prompt.of({ ...prompt, formatters: [...current, ...additions] });
 
-const addSanitizers = (...additions: MapIP<string>[]) =>
+const addSanitizers = (...additions: Sanitizer[]) =>
   ({ sanitizers: current = [], ...prompt }: Prompt) =>
-    new Prompt({
-      ...prompt,
-      sanitizers: [...current, ...additions],
-    });
+    Prompt.of({ ...prompt, sanitizers: [...current, ...additions] });
 
-const addExactSuggestions = (...additions: string[]) =>
-  (prompt: Prompt) => {
-    const match = exactMatch;
-    const validate = (input: string) => additions.find(match(input)) ?? false;
+class Match {
+  #prompt: Promise<Prompt>;
+  #options: string[];
 
-    return new Prompt({
-      ...prompt,
-      suggestions: [...prompt.suggestions, ...additions],
-      validators: [...prompt.validators, validate],
-    });
+  constructor(prompt: Promise<Prompt>, ...options: string[]) {
+    this.#options = options;
+    this.#prompt = prompt;
+  }
+
+  matchCase = () => this.#configureMatch("");
+  ignoreCase = () => this.#configureMatch("i");
+
+  #configureMatch = (flags: string) => {
+    return {
+      matchFull: () => this.#done(flags, "full"),
+      matchInitial: () => this.#done(flags, "init"),
+      matchPartial: () => this.#done(flags, "part"),
+    };
   };
 
-const addLooseSuggestions = (...additions: string[]) =>
-  (prompt: Prompt) => {
-    const match = insensitive(partialMatch);
+  #done = (flags: string, match: "full" | "init" | "part") => {
+    const options = this.#options;
+    const prompt = this.#prompt;
 
-    const validate = (input: string) => {
+    const validator = (input: string) => {
       const maybes: string[] = [];
-      for (const option of additions) {
-        if (input.toLocaleLowerCase() === option.toLocaleLowerCase()) {
-          return option;
-        } else if (match(input)(option)) {
-          maybes.push(option);
-        }
+      const full = new RegExp(`^${input}$`, flags);
+      const init = new RegExp(`^${input}`, flags);
+      const part = new RegExp(`${input}`, flags);
+      for (const option of options) {
+        if (full.test(option)) return option;
+        if (match === "init" && init.test(option)) maybes.push(option);
+        if (match === "part" && part.test(option)) maybes.push(option);
       }
       return maybes.length === 1 ? maybes[0] : false;
     };
 
-    return new Prompt({
-      ...prompt,
-      suggestions: [...prompt.suggestions, ...additions],
-      validators: [...prompt.validators, validate],
-    });
+    return Question.from(prompt.then((prompt) =>
+      Prompt.of({
+        ...prompt,
+        validators: [
+          ...prompt.validators,
+          validator,
+        ],
+      })
+    ));
   };
+}
 
-const addValidators = (...additions: MapIP<string | false>[]) =>
+const addValidators = (...additions: Validator[]) =>
   ({ validators: current = [], ...prompt }: Prompt) =>
-    new Prompt({
+    Prompt.of({
       ...prompt,
       validators: [...current, ...additions],
     });
@@ -132,33 +121,26 @@ class Question {
   }
 
   /**
-   * Validate input using a list of suggested input strings. This list is
-   * checked after the `sanitize` function is run.
-   *
-   * User input must match exactly. Given, `accept("Acceptable")`, the only
-   * valid input will be the string "Acceptable". Entering  "accept",
-   * "acceptable", or "a" will be rejected.
-   *
-   * Multiple calls to accept will add additional acceptable input to the list.
-   * Given `question.accept("right").accept("left")` both `"left"` and `"right"`
-   * will be acceptable input.
-   *
+   * Adds one or more strings as valid (i.e. acceptable) input. These strings
+   * will *not* be listed as suggested input.
    */
-  matchExactly = (...suggestions: string[]) =>
-    Question.from(this.#prompt
-      .then(addExactSuggestions(...suggestions)));
+  accept = (...options: string[]) => {
+    return new Match(this.#prompt, ...options);
+  };
 
   /**
-   * Sets up a sanitize filter that allows the user to to answer prompts like
-   * `accept("Yes", "No")` with "y", "Y", "Ye", "Yes", or "n", "no", "No", etc.
-   *
-   * Returns the accept option that begins with the given user input, ignoring
-   *  case, but only if the user's input matches **exactly only** option.
-   *  Otherwise returns the input.
+   * Adds one or more strings as valid (i.e. acceptable) input. These strings
+   * *will* be listed as suggested input.
    */
-  matchLoosely = (...suggestions: string[]) =>
-    Question.from(this.#prompt
-      .then(addLooseSuggestions(...suggestions)));
+  suggest = (...suggestions: readonly string[]) => {
+    const prompt = this.#prompt.then(({ suggestions: current, ...prompt }) =>
+      Prompt.of({
+        ...prompt,
+        suggestions: Array.from(new Set([...current, ...suggestions])),
+      })
+    );
+    return new Match(prompt, ...suggestions);
+  };
 
   /**
    * Set a default value for when the user provides no input. Replaces before
@@ -201,7 +183,7 @@ class Question {
    * applied. If you've set a `defaultTo` value, validate will never receive the
    * empty string.
    */
-  validate = (validator: MapIP<string | false>) =>
+  validate = (validator: Validator) =>
     Question.from(this.#prompt
       .then(addValidators(validator)));
 
@@ -217,7 +199,7 @@ export function question(message: string) {
  */
 export function askYesNo(message: string): Question {
   return question(message)
-    .matchLoosely("yes", "no")
+    .suggest("yes", "no").ignoreCase().matchInitial()
     .retry();
 }
 
