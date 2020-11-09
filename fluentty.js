@@ -38,105 +38,82 @@ const ANSI_PATTERN = new RegExp([
 function stripColor(string) {
     return string.replace(ANSI_PATTERN, "");
 }
-export class Prompt {
-    constructor({ defaultTo: defaultTo1 = null , formatters =[] , message: message1 , retry: retry1 = false , sanitizers =[] , suggestions =[] , validators =[]  }){
-        this.defaultTo = defaultTo1;
-        this.formatters = formatters;
-        this.message = message1;
-        this.retry = retry1;
-        this.sanitizers = sanitizers;
-        this.suggestions = suggestions;
-        this.validators = validators;
-    }
-    toString() {
-        return `${this.message} ${this.hint}`;
-    }
-    get hint() {
-        const { suggestions: suggestions1 = [] , defaultTo: defaultTo1  } = this;
-        if (suggestions1.length > 0) {
-            const brighten = (s)=>s === defaultTo1 ? brightWhite(s) : dim(s)
-            ;
-            const as = suggestions1.map(brighten);
-            const list = as.length > 2 ? as.join(dim(", ")) : as.join(dim("/"));
-            return dim("(") + list + dim(") ");
-        }
-        return "";
-    }
-    #invokeFormatters=(input)=>this.formatters.reduce((input1, f)=>f(input1, this)
-        , input)
-    ;
-    #invokeSanitizers=(input)=>this.sanitizers.reduce((input1, f)=>f(input1, this)
-        , input)
-    ;
-    #invokeValidators=(input)=>{
-        if (this.validators.length === 0) {
-            return input;
-        }
-        for (const f of this.validators){
-            const match = f(input, this);
-            if (match !== false) return match;
-        }
-        throw new TypeError(`"${input}" failed to validate`);
-    };
-    validate = (input)=>{
-        const sanitized = this.#invokeSanitizers(input);
-        const validated = this.#invokeValidators(sanitized);
-        return this.#invokeFormatters(validated);
-    };
-    static from(message) {
-        return new Prompt({
-            message
-        });
-    }
-    static of(prompt) {
-        return new Prompt({
-            ...prompt
-        });
-    }
+function strip(string) {
+    return stripColor(string).trim();
 }
-const doIO = (prompt)=>stdout(`${prompt}`).then(stdin()).then((input)=>prompt.validate(input)
-    ).catch((reason)=>{
-        return prompt.retry ? doIO(prompt) : Promise.reject(reason);
-    })
-;
-const validateDefaultTo = (defaultTo1)=>(input)=>input === "" && defaultTo1
-;
-const setDefaultTo = (defaultTo1)=>({ validators: validators1 = [] , suggestions: suggestions1 , ...prompt })=>Prompt.of({
-            ...prompt,
-            defaultTo: defaultTo1,
-            suggestions: [
-                ...new Set([
-                    ...suggestions1,
-                    defaultTo1
-                ])
+function checkForErrors(tp) {
+    return async ({ success  })=>{
+        const process = tp.process;
+        const error = new TextDecoder().decode(await process.stderrOutput());
+        const ok = success && error === "";
+        return ok ? tp : Promise.reject();
+    };
+}
+export function configureTestProcess(script) {
+    return async ({ pretest , posttest  } = {
+    })=>{
+        const tempDir = await Deno.makeTempDir({
+            prefix: "test-"
+        });
+        const process = Deno.run({
+            cmd: [
+                "deno",
+                "run",
+                "--unstable",
+                "--allow-all",
+                script,
+                tempDir
             ],
-            validators: [
-                ...validators1,
-                validateDefaultTo(defaultTo1)
-            ]
-        })
-;
-const setRetry = (retry1 = true)=>(prompt)=>Prompt.of({
-            ...prompt,
-            retry: retry1
-        })
-;
-const addFormatters = (...additions)=>({ formatters: current = [] , ...prompt })=>Prompt.of({
-            ...prompt,
-            formatters: [
-                ...current,
-                ...additions
-            ]
-        })
-;
-const addSanitizers = (...additions)=>({ sanitizers: current = [] , ...prompt })=>Prompt.of({
-            ...prompt,
-            sanitizers: [
-                ...current,
-                ...additions
-            ]
-        })
-;
+            stderr: "piped",
+            stdin: "piped",
+            stdout: "piped"
+        });
+        const end = ()=>process.status().then(checkForErrors(tp)).then(posttest).then(()=>Deno.remove(tempDir, {
+                    recursive: true
+                })
+            ).finally(()=>{
+                process.stdin.close();
+                process.stdout.close();
+                process.close();
+            })
+        ;
+        const tp = {
+            process,
+            tempDir,
+            write: sendInput(process.stdin),
+            read: getOutput(process.stdout)(),
+            readError: getOutput(process.stderr)(),
+            end
+        };
+        if (pretest != null) await pretest(tp);
+        return tp;
+    };
+}
+export function makeExpects(tp, assertEquals) {
+    async function expectQuestion(expected) {
+        const actual = strip(await tp.read());
+        assertEquals(actual, expected);
+    }
+    async function answer(answer1 = "") {
+        await tp.write(answer1);
+    }
+    async function expectJSON(expected) {
+        const jsonString = strip(await tp.read());
+        const jsonData = JSON.parse(jsonString);
+        assertEquals(jsonData, expected);
+    }
+    async function expectNoErrors() {
+        const actual = await checkForErrors(tp);
+        const expected = "";
+        assertEquals(actual, "");
+    }
+    return {
+        answer,
+        expectJSON,
+        expectNoErrors,
+        expectQuestion
+    };
+}
 class Match {
     #prompt;
     #options;
@@ -182,54 +159,68 @@ class Match {
         ));
     };
 }
-const addValidators = (...additions)=>({ validators: current = [] , ...prompt1 })=>Prompt.of({
-            ...prompt1,
-            validators: [
-                ...current,
-                ...additions
-            ]
-        })
-;
 class Question {
     #prompt;
     constructor(value){
-        this.#prompt = value;
+        this.#prompt = Promise.resolve(value);
     }
     static from(prompt) {
         return new Question(Promise.resolve(prompt));
     }
+    map = (fn)=>Question.from(this.#prompt.then(fn))
+    ;
     accept = (...options1)=>{
         return new Match(this.#prompt, ...options1);
     };
-    suggest = (...suggestions1)=>{
+    suggest = (...suggestions)=>{
         const prompt2 = this.#prompt.then(({ suggestions: current , ...prompt3 })=>Prompt.of({
                 ...prompt3,
                 suggestions: Array.from(new Set([
                     ...current,
-                    ...suggestions1
+                    ...suggestions
                 ]))
             })
         );
-        return new Match(prompt2, ...suggestions1);
+        return new Match(prompt2, ...suggestions);
     };
-    defaultTo = (value1)=>Question.from(this.#prompt.then(setDefaultTo(value1)))
+    defaultTo = (defaultTo)=>this.map((prompt2)=>prompt2.concat({
+                defaultTo
+            })
+        )
     ;
-    format = (formatter)=>Question.from(this.#prompt.then(addFormatters(formatter)))
+    format = (...formatters)=>this.map((prompt2)=>prompt2.concat({
+                formatters
+            })
+        )
     ;
-    retry = (value1 = true)=>Question.from(this.#prompt.then(setRetry(value1)))
+    retry = (retry = true)=>this.map((prompt2)=>prompt2.concat({
+                retry
+            })
+        )
     ;
-    sanitize = (sanitizer)=>Question.from(this.#prompt.then(addSanitizers(sanitizer)))
+    sanitize = (...sanitizers)=>this.map((prompt2)=>prompt2.concat({
+                sanitizers
+            })
+        )
     ;
-    validate = (validator)=>Question.from(this.#prompt.then(addValidators(validator)))
+    validate = (...validators)=>this.map((prompt2)=>prompt2.concat({
+                validators
+            })
+        )
     ;
-    IO = ()=>this.#prompt.then(doIO)
-    ;
+    IO = ()=>{
+        const doIO = (prompt2)=>stdout(`${prompt2}`).then(stdin()).then((input)=>prompt2.validate(input)
+            ).catch((reason)=>prompt2.retry ? doIO(prompt2) : Promise.reject(reason)
+            )
+        ;
+        return this.#prompt.then(doIO);
+    };
 }
-function question(message2) {
-    return Question.from(Prompt.from(message2));
+function question(message) {
+    return Question.from(Prompt.from(message));
 }
-function askYesNo(message2) {
-    return question(message2).suggest("yes", "no").ignoreCase().matchInitial().retry();
+function askYesNo(message) {
+    return question(message).suggest("yes", "no").ignoreCase().matchInitial().retry();
 }
 let NATIVE_OS = "linux";
 const navigator = globalThis.navigator;
@@ -1647,6 +1638,13 @@ var EOL;
     EOL1["CRLF"] = "\r\n";
 })(EOL || (EOL = {
 }));
+export const IO = async (...operations)=>{
+    const results = [];
+    for await (const q of operations){
+        results.push(await q.IO());
+    }
+    return results;
+};
 export function forceWriteTextFile(filename, data) {
     return Deno.writeTextFile(filename, data);
 }
@@ -1668,8 +1666,8 @@ export const decodeText = (source)=>async (accept = 5120)=>{
         return new TextDecoder().decode(buf.subarray(0, accept < got ? accept : got)).trim();
     }
 ;
-export const encodeText = (source)=>async (message2)=>{
-        const buf = new TextEncoder().encode(message2);
+export const encodeText = (source)=>async (message)=>{
+        const buf = new TextEncoder().encode(message);
         await source.write(buf);
     }
 ;
@@ -1688,7 +1686,7 @@ export function verifyWriteTextFile(filename) {
     };
 }
 export function sendInput(handle) {
-    return (message2 = "")=>handle.write(new TextEncoder().encode(message2 + "\n"))
+    return (message = "")=>handle.write(new TextEncoder().encode(message + "\n"))
     ;
 }
 export function getOutput(handle) {
@@ -1700,80 +1698,86 @@ export function getOutput(handle) {
         }
     ;
 }
-function strip(string) {
-    return stripColor(string).trim();
-}
-function checkForErrors(tp) {
-    return async ({ success  })=>{
-        const process = tp.process;
-        const error = new TextDecoder().decode(await process.stderrOutput());
-        const ok = success && error === "";
-        return ok ? tp : Promise.reject();
+export class Prompt {
+    constructor({ defaultTo =null , formatters =[] , message: message1 , retry =false , sanitizers =[] , suggestions =[] , validators =[]  }){
+        this.defaultTo = defaultTo;
+        this.formatters = formatters;
+        this.message = message1;
+        this.retry = retry;
+        this.sanitizers = sanitizers;
+        this.suggestions = suggestions;
+        this.validators = validators;
+    }
+    toString() {
+        return `${this.message} ${this.hint}`;
+    }
+    get hint() {
+        const { suggestions: suggestions1 = [] , defaultTo: defaultTo1  } = this;
+        if (suggestions1.length > 0) {
+            const brighten = (s)=>s === defaultTo1 ? brightWhite(s) : dim(s)
+            ;
+            const as = suggestions1.map(brighten);
+            const list = as.length > 2 ? as.join(dim(", ")) : as.join(dim("/"));
+            return dim("(") + list + dim(") ");
+        }
+        return "";
+    }
+    #invokeFormatters=(input)=>this.formatters.reduce((input1, f)=>f(input1, this)
+        , input)
+    ;
+    #invokeSanitizers=(input)=>this.sanitizers.reduce((input1, f)=>f(input1, this)
+        , input)
+    ;
+    #invokeValidators=(input)=>{
+        if (this.defaultTo != null && input === "" || input === this.defaultTo) {
+            return this.defaultTo;
+        }
+        if (this.validators.length === 0) {
+            return input;
+        }
+        for (const f of this.validators){
+            const match = f(input, this);
+            if (match !== false) return match;
+        }
+        throw new TypeError(`"${input}" failed to validate`);
     };
-}
-export function configureTestProcess(script) {
-    return async ({ pretest , posttest  } = {
-    })=>{
-        const tempDir = await Deno.makeTempDir({
-            prefix: "test-"
-        });
-        const process = Deno.run({
-            cmd: [
-                "deno",
-                "run",
-                "--unstable",
-                "--allow-all",
-                script,
-                tempDir
+    concat(prompt) {
+        return Prompt.of({
+            message: prompt.message ?? this.message,
+            defaultTo: prompt.defaultTo ?? this.defaultTo,
+            retry: prompt.retry ?? this.retry,
+            formatters: [
+                ...this.formatters,
+                ...prompt.formatters ?? []
             ],
-            stderr: "piped",
-            stdin: "piped",
-            stdout: "piped"
+            sanitizers: [
+                ...this.sanitizers,
+                ...prompt.sanitizers ?? []
+            ],
+            suggestions: [
+                ...this.suggestions,
+                ...prompt.suggestions ?? []
+            ],
+            validators: [
+                ...this.validators,
+                ...prompt.validators ?? []
+            ]
         });
-        const end = ()=>process.status().then(checkForErrors(tp)).then(posttest).then(()=>Deno.remove(tempDir, {
-                    recursive: true
-                })
-            ).finally(()=>{
-                process.stdin.close();
-                process.stdout.close();
-                process.close();
-            })
-        ;
-        const tp = {
-            process,
-            tempDir,
-            write: sendInput(process.stdin),
-            read: getOutput(process.stdout)(),
-            readError: getOutput(process.stderr)(),
-            end
-        };
-        if (pretest != null) await pretest(tp);
-        return tp;
+    }
+    validate = (input)=>{
+        const sanitized = this.#invokeSanitizers(input);
+        const validated = this.#invokeValidators(sanitized);
+        return this.#invokeFormatters(validated);
     };
-}
-export function makeExpects(tp, assertEquals) {
-    async function expectQuestion(expected) {
-        const actual = strip(await tp.read());
-        assertEquals(actual, expected);
+    static from(message) {
+        return new Prompt({
+            message
+        });
     }
-    async function answer(answer1 = "") {
-        await tp.write(answer1);
+    static of(prompt) {
+        return new Prompt({
+            ...prompt
+        });
     }
-    async function expectJSON(expected) {
-        const jsonString = strip(await tp.read());
-        const jsonData = JSON.parse(jsonString);
-        assertEquals(jsonData, expected);
-    }
-    async function expectNoErrors() {
-        const actual = await checkForErrors(tp);
-        const expected = "";
-        assertEquals(actual, "");
-    }
-    return {
-        answer,
-        expectJSON,
-        expectNoErrors,
-        expectQuestion
-    };
 }
 
