@@ -3,21 +3,27 @@ import { askYesNo } from "./question.ts";
 
 const DEFAULT_BUFFER_SIZE = 5120;
 
+interface Process<T> {
+  IO: () => Promise<T> | T;
+}
+
 /**
  * Does the given IO operations in order, and returns an array of results.
- * @param operations any object with an **IO** method
+ * @param processes any object with an **IO** method
  */
-export const IO = async <T>(...operations: { IO: () => T }[]) => {
+export async function IO<T>(...processes: Process<T>[]) {
   const results: T[] = [];
-  for await (const q of operations) {
-    results.push(await q.IO());
+  for await (const process of processes) {
+    const input = await process.IO();
+    results.push(input);
   }
   return results;
-};
+}
 
 /**
  * Overwrites `filename` even if it exists, without prompting the user.
  */
+
 export function forceWriteTextFile(filename: string, data: string) {
   return Deno.writeTextFile(filename, data);
 }
