@@ -1,14 +1,28 @@
 import { assertEquals } from "../remote/asserts.ts";
-import { configureTestProcess } from "./io.helpers.ts";
+import { IO } from "./io.ts";
 
-const spawnTestProcess = configureTestProcess("source/io.process.ts");
+Deno.test(`IO`, async () => {
+  class Process<T> {
+    #value: T;
+    constructor(t: T) {
+      this.#value = t;
+    }
+    async IO(): Promise<T> {
+      return this.#value;
+    }
+  }
 
-Deno.test(`io`, async () => {
-  const tp = await spawnTestProcess();
   {
-    const actual = await tp.read();
-    const expected = `todo: write io tests`;
+    const actual = await IO(
+      new Process("one"),
+      new Process("two"),
+      new Process("three"),
+    );
+    const expected = [
+      "one",
+      "two",
+      "three",
+    ];
     assertEquals(actual, expected);
   }
-  await tp.end();
 });

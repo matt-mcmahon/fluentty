@@ -1,120 +1,91 @@
 import { exists } from "../remote/fs.ts";
+import { ifElse } from "../remote/functional.ts";
 import { askYesNo } from "./question.ts";
 
-const DEFAULT_BUFFER_SIZE = 5120;
+export const DEFAULT_BUFFER_SIZE = 5120;
+
+interface Process<T> {
+  IO: () => Promise<T> | T;
+}
 
 /**
  * Does the given IO operations in order, and returns an array of results.
- * @param operations any object with an **IO** method
+ * @param processes any object with an **IO** method
  */
-export const IO = async <T>(...operations: { IO: () => T }[]) => {
+export async function IO<T>(...processes: Process<T>[]) {
   const results: T[] = [];
-  for await (const q of operations) {
-    results.push(await q.IO());
+  for await (const process of processes) {
+    const input = await process.IO();
+    results.push(input);
   }
   return results;
-};
+}
 
-/**
- * Overwrites `filename` even if it exists, without prompting the user.
- */
+/** Overwrites `filename` even if it exists, without prompting the user. */
 export function forceWriteTextFile(filename: string, data: string) {
   return Deno.writeTextFile(filename, data);
 }
 
-/**
- * Takes an async function, `action`, then a string, `input`.
- * If input is "yes", runs the action.
- * Returns the string.
- */
-export function ifYes(action: () => Promise<void>) {
-  return async (input: string | boolean) => {
-    if (input === "yes" || input === true) await action();
-    return input;
+/** If input is "yes" return true */
+export function isYes(input: string | boolean) {
+  return input === "yes" || input === true;
+}
+
+/** If input is "no" return true */
+export function isNo(input: string | boolean) {
+  return input === "no" || input === false;
+}
+
+/** Consumes any input and returns `Promise<void>` */
+export async function noop() {}
+
+/** If a file at **path** exists, prompt the user before overwriting. */
+export function verifyWriteTextFile(path: string) {
+  return async (data: string) => {
+    const justCreate = () => Deno.writeTextFile(path, data);
+
+    const askOverwrite = async () =>
+      askYesNo(`File ${path} exists, overwrite?`)
+        .IO()
+        .then(ifElse(isYes, justCreate, noop));
+
+    await exists(path)
+      .then(ifElse(isYes, askOverwrite, justCreate));
   };
 }
 
-/**
- * Takes an async function, `action`, then a string, `input`.
- * If input is "no", runs the action.
- * Returns the string.
- */
-export function ifNo(action: () => Promise<void>) {
-  return async (input: string | boolean) => {
-    if (input === "no" || input === false) await action();
-    return input;
-  };
-}
-
-export const decodeText = (source: Deno.Reader) =>
-  async (accept = DEFAULT_BUFFER_SIZE) => {
-    const buf = new Uint8Array(accept);
-    const got = <number> await source.read(buf);
+/** _Read_ output from the given __buffer__. */
+export function readFrom(buffer: Deno.Reader) {
+  return async (accept = DEFAULT_BUFFER_SIZE) => {
+    const max = DEFAULT_BUFFER_SIZE;
+    const buf = new Uint8Array(accept > max ? accept : max);
+    const got = <number> await buffer.read(buf);
     return new TextDecoder()
       .decode(buf.subarray(0, accept < got ? accept : got))
       .trim();
   };
+}
 
-export const encodeText = (source: Deno.Writer) =>
-  async (message: string) => {
+/** _Write_ message to the given __buffer__. */
+export function writeTo(source: Deno.Writer) {
+  return async (message: string) => {
     const buf = new TextEncoder().encode(message);
     await source.write(buf);
   };
-
-/**
- * Print message to stdout
- *
- * @returns number of bytes written
- */
-export const stdout = encodeText(Deno.stdout);
-
-/**
- * Accept input from stdin.
- */
-export const stdin = (accept?: number) => () => decodeText(Deno.stdin)(accept);
-
-/**
- * Ignores any input and returns Promise<void>
- */
-export async function done() {}
-
-/**
- * If the `filename` exists, prompts the user before overwriting.
- */
-export function verifyWriteTextFile(filename: string) {
-  return async (data: string) => {
-    const justCreate = () => Deno.writeTextFile(filename, data);
-
-    const askOverwrite = async () =>
-      askYesNo(`File ${filename} exists, overwrite`)
-        .IO()
-        .then(ifYes(justCreate))
-        .then(done);
-
-    await exists(filename)
-      .then(ifNo(justCreate))
-      .then(ifYes(askOverwrite));
-  };
 }
 
-/**
- * _Write_ message input to the given `Deno.run()` process **handle**.
- * Automatically appends a new-line character to the message.
- */
-export function sendInput(handle: Deno.Writer & Deno.Closer) {
-  return (message = "") =>
-    handle.write(new TextEncoder().encode(message + "\n"));
+/** _Write_ `${message}\n` to given __buffer__. */
+export function writeln(buffer: Deno.Writer) {
+  return (message = "") => writeTo(buffer)(message + "\n");
 }
 
-/** _Read_ output from the given `Deno.run()` process **handle**. */
-export function getOutput(handle: Deno.Reader & Deno.Closer) {
-  return (accept = DEFAULT_BUFFER_SIZE) =>
-    async () => {
-      const max = DEFAULT_BUFFER_SIZE;
-      const buf = new Uint8Array(accept > max ? accept : max);
-      const got = <number> await handle.read(buf);
-      return new TextDecoder()
-        .decode(buf.subarray(0, accept < got ? accept : got))
-        .trim();
-    };
+/** Accept up to DEFAULT_BUFFER_SIZE input from stdin. */
+export function stdin() {
+  return readFrom(Deno.stdin)();
 }
+
+/** Print message to stdout */
+export const stdout = writeTo(Deno.stdout);
+
+/** Print message to stdout */
+export const stderr = writeTo(Deno.stderr);
