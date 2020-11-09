@@ -1,54 +1,6 @@
 import { stdin, stdout } from "./io.ts";
+import { Match } from "./match.ts";
 import { Formatter, Prompt, Sanitizer, Validator } from "./prompt.ts";
-
-class Match {
-  #prompt: Promise<Prompt>;
-  #options: string[];
-
-  constructor(prompt: Promise<Prompt>, ...options: string[]) {
-    this.#options = options;
-    this.#prompt = prompt;
-  }
-
-  matchCase = () => this.#configureMatch("");
-  ignoreCase = () => this.#configureMatch("i");
-
-  #configureMatch = (flags: string) => {
-    return {
-      matchFull: () => this.#done(flags, "full"),
-      matchInitial: () => this.#done(flags, "init"),
-      matchPartial: () => this.#done(flags, "part"),
-    };
-  };
-
-  #done = (flags: string, match: "full" | "init" | "part") => {
-    const options = this.#options;
-    const prompt = this.#prompt;
-
-    const validator = (input: string) => {
-      const maybes: string[] = [];
-      const full = new RegExp(`^${input}$`, flags);
-      const init = new RegExp(`^${input}`, flags);
-      const part = new RegExp(`${input}`, flags);
-      for (const option of options) {
-        if (full.test(option)) return option;
-        if (match === "init" && init.test(option)) maybes.push(option);
-        if (match === "part" && part.test(option)) maybes.push(option);
-      }
-      return maybes.length === 1 ? maybes[0] : false;
-    };
-
-    return Question.from(prompt.then((prompt) =>
-      Prompt.of({
-        ...prompt,
-        validators: [
-          ...prompt.validators,
-          validator,
-        ],
-      })
-    ));
-  };
-}
 
 /**
  * Initialize a new prompt, storing the given `message` and returning a
@@ -74,22 +26,21 @@ class Match {
  *
  */
 export class Question {
-  #prompt: Promise<Prompt>;
+  #prompt: Prompt;
 
-  constructor(value: PromiseLike<Prompt> | Prompt) {
-    this.#prompt = Promise.resolve(value);
+  constructor(value: Prompt) {
+    this.#prompt = value;
   }
 
-  static from(prompt: PromiseLike<Prompt> | Prompt) {
-    return new Question(Promise.resolve(prompt));
+  static from(prompt: Prompt) {
+    return new Question(prompt);
   }
 
   /**
    * Creates a new question by merging this question's Prompt with a new
    * Prompt.
    */
-  map = (fn: (prompt: Prompt) => Prompt) =>
-    Question.from(this.#prompt.then(fn));
+  map = (fn: (prompt: Prompt) => Prompt) => Question.from(fn(this.#prompt));
 
   /**
    * Adds one or more strings as valid (i.e. acceptable) input. These strings
@@ -104,12 +55,7 @@ export class Question {
    * *will* be listed as suggested input.
    */
   suggest = (...suggestions: readonly string[]) => {
-    const prompt = this.#prompt.then(({ suggestions: current, ...prompt }) =>
-      Prompt.of({
-        ...prompt,
-        suggestions: Array.from(new Set([...current, ...suggestions])),
-      })
-    );
+    const prompt = this.#prompt.concat({ suggestions });
     return new Match(prompt, ...suggestions);
   };
 
@@ -149,16 +95,15 @@ export class Question {
   validate = (...validators: Validator[]) =>
     this.map((prompt) => prompt.concat({ validators }));
 
-  IO = () => {
-    const doIO = (prompt: Prompt) =>
-      stdout(`${prompt}`)
-        .then(stdin())
-        .then((input) => prompt.validate(input))
-        .catch((reason): Promise<string> =>
-          prompt.retry ? doIO(prompt) : Promise.reject(reason)
-        );
-    return this.#prompt.then(doIO);
-  };
+  IO = () =>
+    stdout(`${this.#prompt}`)
+      .then(stdin())
+      .then(this.#prompt.validate)
+      .catch((reason): Promise<string> =>
+        this.#prompt.retry ? this.IO() : Promise.reject(reason)
+      );
+
+  test = (input: string) => this.#prompt.validate(input);
 }
 
 export function question(message: string) {
