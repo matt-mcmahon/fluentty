@@ -37,7 +37,7 @@ GEN_DIR                ?= /dev/null
 
 REMOTE_DIRS            := remote
 
-LINT_FILES             := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts" -not -name "*.test.ts")
+PRODUCTION_FILES       := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts" -not -name "*.test.ts")
 REMOTE_DEPENDENCIES    := $(shell find "$(REMOTE_DIRS)"      -type f -name "*.ts")
 SOURCE_FILES           := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts")
 
@@ -82,7 +82,7 @@ endif
 endif
 
 ifneq ($(DENO_BUNDLE_FILE),)
-$(DENO_BUNDLE_FILE): $(LINT_FILES) $(REMOTE_DEPENDENCIES)
+$(DENO_BUNDLE_FILE): $(PRODUCTION_FILES) $(REMOTE_DEPENDENCIES)
 	@echo "// deno-fmt-ignore-file"   > $(DENO_BUNDLE_FILE)
 	@echo "// deno-lint-ignore-file" >> $(DENO_BUNDLE_FILE)
 	@echo "// @ts-nocheck"           >> $(DENO_BUNDLE_FILE)
@@ -116,12 +116,12 @@ format:
 install: .print-install-header $(LOCK_FILE)
 
 lint:
-	deno fmt --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)
-	-deno lint --unstable $(RUN_PERMISSIONS) $(LINT_FILES)
+	deno fmt --check $(DENO_SOURCE_DIR)
+	-deno lint --unstable $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)
 
 lint-quiet:
-	deno fmt --quiet --check $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)
-	-deno lint --quiet --unstable $(RUN_PERMISSIONS) $(LINT_FILES)
+	deno fmt --quiet --check $(DENO_SOURCE_DIR)
+	-deno lint --quiet --unstable $(RUN_PERMISSIONS) $(DENO_SOURCE_DIR)
 
 run:
 	deno run $(RUN_PERMISSIONS) $(DENO_MAIN)
