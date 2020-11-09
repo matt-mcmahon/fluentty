@@ -71,6 +71,11 @@ export class Prompt {
     this.sanitizers.reduce((input, f) => f(input, this), input);
 
   #invokeValidators = (input: string) => {
+    if (this.defaultTo != null && input === "" || input === this.defaultTo) {
+      // Empty input? use defaultTo if defined
+      return this.defaultTo;
+    }
+
     if (this.validators.length === 0) {
       // No validators? Accept any input.
       return input;
@@ -84,6 +89,43 @@ export class Prompt {
 
     throw new TypeError(`"${input}" failed to validate`);
   };
+
+  /**
+   * Merges two prompts, field by field, and returns a new prompt that is a
+   * concatenation of both prompts fields. Validating a concatenation of two
+   * prompts will call of all prompt 1's sanitize methods, followed by all of
+   * prompt 2's sanitize methods, etc.
+   *
+   * Concatenation is not composition:
+   *
+   * ```javascript
+   * prompt1.concat(prompt2) != compose(prompt1, prompt2)
+   * ```
+   *
+   * Where compose could be:
+   *
+   * ```
+   * function compose(prompt1, prompt2) {
+   *   return prompt1.validate(
+   *     prompt2.validate(input)
+   *   )
+   * }
+   * ```
+   *
+   */
+  concat(prompt: Partial<Prompt>): Prompt {
+    return Prompt.of({
+      // overwrite these:
+      message: prompt.message ?? this.message,
+      defaultTo: prompt.defaultTo ?? this.defaultTo,
+      retry: prompt.retry ?? this.retry,
+      // merge these:
+      formatters: [...this.formatters, ...prompt.formatters ?? []],
+      sanitizers: [...this.sanitizers, ...prompt.sanitizers ?? []],
+      suggestions: [...this.suggestions, ...prompt.suggestions ?? []],
+      validators: [...this.validators, ...prompt.validators ?? []],
+    });
+  }
 
   validate = (input: string) => {
     const sanitized = this.#invokeSanitizers(input);
