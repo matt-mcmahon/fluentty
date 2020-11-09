@@ -4,6 +4,18 @@ import { askYesNo } from "./question.ts";
 const DEFAULT_BUFFER_SIZE = 5120;
 
 /**
+ * Does the given IO operations in order, and returns an array of results.
+ * @param operations any object with an **IO** method
+ */
+export const IO = async <T>(...operations: { IO: () => T }[]) => {
+  const results: T[] = [];
+  for await (const q of operations) {
+    results.push(await q.IO());
+  }
+  return results;
+};
+
+/**
  * Overwrites `filename` even if it exists, without prompting the user.
  */
 export function forceWriteTextFile(filename: string, data: string) {
