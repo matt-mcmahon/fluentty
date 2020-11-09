@@ -1,5 +1,5 @@
 import { assertEquals } from "../remote/asserts.ts";
-import { configureTestProcess } from "./test_helpers.ts";
+import { configureTestProcess } from "./io.helpers.ts";
 import { strip } from "./utils.ts";
 
 const startTestProcess = configureTestProcess(

@@ -1,6 +1,6 @@
 import { blue, green, red } from "../remote/colors.ts";
-import { ifYes, stdout } from "./io.ts";
-import { askYesNo, IO, question } from "./question.ts";
+import { ifYes, IO, stdout } from "./io.ts";
+import { askYesNo, question } from "./question.ts";
 
 const name = await question("Choose your Knight:")
   .accept(
@@ -17,7 +17,7 @@ const name = await question("Choose your Knight:")
   .retry()
   .IO();
 
-const approach = await askYesNo(`${name}, do you approach the bridge of death?`)
+await askYesNo(`${name}, do you approach the bridge of death?`)
   .IO()
   .then(ifYes(answerTheQuestions));
 

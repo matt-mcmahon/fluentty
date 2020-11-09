@@ -1,37 +1,6 @@
 import { stdin, stdout } from "./io.ts";
 import { Formatter, Prompt, Sanitizer, Validator } from "./prompt.ts";
 
-const doIO = (prompt: Prompt) =>
-  stdout(`${prompt}`)
-    .then(stdin())
-    .then((input) => prompt.validate(input))
-    .catch((reason): Promise<string> => {
-      return prompt.retry ? doIO(prompt) : Promise.reject(reason);
-    });
-
-const validateDefaultTo = (defaultTo: string): Validator =>
-  (input: string) => input === "" && defaultTo;
-
-const setDefaultTo = (defaultTo: string) =>
-  ({ validators = [], suggestions, ...prompt }: Prompt) =>
-    Prompt.of({
-      ...prompt,
-      defaultTo,
-      suggestions: [...new Set([...suggestions, defaultTo])],
-      validators: [...validators, validateDefaultTo(defaultTo)],
-    });
-
-const setRetry = (retry = true) =>
-  (prompt: Prompt) => Prompt.of({ ...prompt, retry });
-
-const addFormatters = (...additions: Formatter[]) =>
-  ({ formatters: current = [], ...prompt }: Prompt) =>
-    Prompt.of({ ...prompt, formatters: [...current, ...additions] });
-
-const addSanitizers = (...additions: Sanitizer[]) =>
-  ({ sanitizers: current = [], ...prompt }: Prompt) =>
-    Prompt.of({ ...prompt, sanitizers: [...current, ...additions] });
-
 class Match {
   #prompt: Promise<Prompt>;
   #options: string[];
@@ -81,44 +50,46 @@ class Match {
   };
 }
 
-const addValidators = (...additions: Validator[]) =>
-  ({ validators: current = [], ...prompt }: Prompt) =>
-    Prompt.of({
-      ...prompt,
-      validators: [...current, ...additions],
-    });
-
 /**
- * Initialize a new prompt, storing the given `message` and returning a Promise.
- * The configuration object can be customized by chaining one or more `then`
- * method calls, passing the following functions `accept`, `acceptPartial`,
- * `defaultTo`, `format`, `retry` `sanitize`, or `validate`.
+ * Initialize a new prompt, storing the given `message` and returning a
+ * configuration object. You can chain methods to configure the prompt, for
+ * example:
  *
  * ```js
- * Question("Do you want to continue")
- *   .acceptPartial("yes", "no")
+ * Question.from("Do you want to continue")
+ *   .accept("yes", "no").ignoreCase().matchInitial()
  *   .defaultTo("yes")
  *   .retry()
- *   .IO()
+ *   .IO();
  * ```
+ *
+ * Produces:
+ *
  * ```plaintext
  * > Do you want to continue (𝘆𝗲𝘀/no): _
  * ```
  *
- * Not that no IO will occur until you call the `IO()` method, which should
- * be chained with a `catch(...)` method.
+ * Note that no IO will occur until you call the `IO()` method, which resolves
+ * to a Promise<string>.
  *
  */
-class Question {
+export class Question {
   #prompt: Promise<Prompt>;
 
-  constructor(value: Promise<Prompt>) {
-    this.#prompt = value;
+  constructor(value: PromiseLike<Prompt> | Prompt) {
+    this.#prompt = Promise.resolve(value);
   }
 
   static from(prompt: PromiseLike<Prompt> | Prompt) {
     return new Question(Promise.resolve(prompt));
   }
+
+  /**
+   * Creates a new question by merging this question's Prompt with a new
+   * Prompt.
+   */
+  map = (fn: (prompt: Prompt) => Prompt) =>
+    Question.from(this.#prompt.then(fn));
 
   /**
    * Adds one or more strings as valid (i.e. acceptable) input. These strings
@@ -146,33 +117,25 @@ class Question {
    * Set a default value for when the user provides no input. Replaces before
    * sanitize, acceptable, and validate functions are run.
    */
-  defaultTo = (value: string) =>
-    Question.from(this.#prompt
-      .then(setDefaultTo(value)));
+  defaultTo = (defaultTo: string) =>
+    this.map((prompt) => prompt.concat({ defaultTo }));
 
   /**
    * Run after the user's input is found valid.
    */
-  format = (formatter: (input: string, prompt: Prompt) => string) =>
-    Question.from(this.#prompt
-      .then(addFormatters(formatter)));
+  format = (...formatters: Formatter[]) =>
+    this.map((prompt) => prompt.concat({ formatters }));
 
   /**
-   * When true, invalid input results in a re-prompt.
-   *
-   * @param value retry on invalid input
+   * Retry when given invalid input.
    */
-  retry = (value = true) =>
-    Question.from(this.#prompt
-      .then(setRetry(value)));
+  retry = (retry = true) => this.map((prompt) => prompt.concat({ retry }));
 
   /**
-   * Sanitizes the users input before matching against the accept list, or trying
-   * to validate.
+   * Sanitizes the users input before trying to validate.
    */
-  sanitize = (sanitizer: (input: string, prompt: Prompt) => string) =>
-    Question.from(this.#prompt
-      .then(addSanitizers(sanitizer)));
+  sanitize = (...sanitizers: Sanitizer[]) =>
+    this.map((prompt) => prompt.concat({ sanitizers }));
 
   /**
    * Use a predicate to validate user input. If the validation function returns
@@ -180,14 +143,22 @@ class Question {
    * valid.
    *
    * Validate is checked after the `defaultTo` and `accept` rules have been
-   * applied. If you've set a `defaultTo` value, validate will never receive the
-   * empty string.
+   * applied. If you've set a `defaultTo` value, validate will never receive
+   * the empty string.
    */
-  validate = (validator: Validator) =>
-    Question.from(this.#prompt
-      .then(addValidators(validator)));
+  validate = (...validators: Validator[]) =>
+    this.map((prompt) => prompt.concat({ validators }));
 
-  IO = () => this.#prompt.then(doIO);
+  IO = () => {
+    const doIO = (prompt: Prompt) =>
+      stdout(`${prompt}`)
+        .then(stdin())
+        .then((input) => prompt.validate(input))
+        .catch((reason): Promise<string> =>
+          prompt.retry ? doIO(prompt) : Promise.reject(reason)
+        );
+    return this.#prompt.then(doIO);
+  };
 }
 
 export function question(message: string) {
@@ -202,11 +173,3 @@ export function askYesNo(message: string): Question {
     .suggest("yes", "no").ignoreCase().matchInitial()
     .retry();
 }
-
-export const IO = async (...questions: Question[]) => {
-  const answers: string[] = [];
-  for await (const q of questions) {
-    answers.push(await q.IO());
-  }
-  return answers;
-};
