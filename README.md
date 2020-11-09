@@ -20,7 +20,7 @@ const name = await question("Choose your Knight:")
     "Sir not Appearing in this Film",
   )
   .ignoreCase()
-  .matchPartial()
+  .matchAnywhere()
   .retry()
   .IO();
 
