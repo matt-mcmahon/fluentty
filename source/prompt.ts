@@ -114,18 +114,31 @@ export class Prompt {
    *
    */
   concat(prompt: Partial<Prompt>): Prompt {
+    const [a, b] = [this, prompt];
     return Prompt.of({
       // overwrite these:
-      message: prompt.message ?? this.message,
-      defaultTo: prompt.defaultTo ?? this.defaultTo,
-      retry: prompt.retry ?? this.retry,
+      message: b.message ?? a.message,
+      defaultTo: b.defaultTo ?? a.defaultTo,
+      retry: b.retry ?? a.retry,
       // merge these:
-      formatters: [...this.formatters, ...prompt.formatters ?? []],
-      sanitizers: [...this.sanitizers, ...prompt.sanitizers ?? []],
-      suggestions: Array.from(
-        new Set([...this.suggestions, ...prompt.suggestions ?? []]),
-      ),
-      validators: [...this.validators, ...prompt.validators ?? []],
+      formatters: [
+        ...a.formatters ?? [],
+        ...b.formatters ?? [],
+      ],
+      sanitizers: [
+        ...a.sanitizers ?? [],
+        ...b.sanitizers ?? [],
+      ],
+      suggestions: [
+        ...new Set([
+          ...a.suggestions ?? [],
+          ...b.suggestions ?? [],
+        ]),
+      ],
+      validators: [
+        ...a.validators ?? [],
+        ...b.validators ?? [],
+      ],
     });
   }
 

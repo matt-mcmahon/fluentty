@@ -2,6 +2,14 @@ import { assertEquals, assertThrowsAsync, fail } from "../remote/asserts.ts";
 import { brightWhite, dim, stripColor } from "../remote/colors.ts";
 import { Prompt } from "./prompt.ts";
 
+Deno.test("Prompt.prototype.suggestions - sort order", () => {
+  const a1 = [1, 2, 3];
+  const a2 = [4, 2, 5];
+  const actual = [...new Set([...a1, ...a2])];
+  const expected = [1, 2, 3, 4, 5];
+  assertEquals(actual, expected);
+});
+
 Deno.test("Prompt.prototype.validate", () => {
   const message = "To be or not to be:";
   const prompt = Prompt.from(message);
