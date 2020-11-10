@@ -11,23 +11,20 @@ const name = await question("Choose your Knight:")
     "Sir Galahad the Pure",
     "Sir Bors",
     "Sir not Appearing in this Film",
-  )
-  .ignoreCase()
-  .matchAnywhere()
+  ).ignoreCase().matchAnywhere()
+  .defaultTo("Sir Lancelot the Brave").justAccept()
   .retry()
   .IO();
 
 await askYesNo(`${name}, do you approach the bridge of death?`)
+  .defaultTo("yes").andSuggest()
   .IO()
   .then(ifYes(answerTheQuestions));
 
 async function answerTheQuestions() {
   const questions = [
     question("What is your name?")
-      .validate((input) => {
-        const re = new RegExp(input, "i");
-        return re.test(name) ? name : false;
-      }),
+      .accept(name).ignoreCase().matchAnywhere(),
     question("What is your quest?")
       .retry()
       .validate((input) => /grail/i.test(input) ? input : false)

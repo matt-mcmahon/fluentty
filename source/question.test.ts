@@ -51,17 +51,6 @@ Deno.test({
       assertEquals(actual, expected, message);
     }
 
-    await tp.write();
-
-    {
-      const actual = strip(await tp.read());
-      const expected = "Sir Lancelot the Brave" +
-        ", do you approach the bridge of death? (yes/no)";
-      const message = `expected:\n\t${Deno.inspect(expected)}\n` +
-        `got:\n\t${Deno.inspect(actual)}`;
-      assertEquals(actual, expected, message);
-    }
-
     await tp.write("yes");
 
     {

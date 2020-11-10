@@ -63,8 +63,15 @@ export class Question {
    * Set a default value for when the user provides no input. Replaces before
    * sanitize, acceptable, and validate functions are run.
    */
-  defaultTo = (defaultTo: string) =>
-    this.map((prompt) => prompt.concat({ defaultTo }));
+  defaultTo = (defaultTo: string) => {
+    return {
+      andSuggest: () =>
+        this.map((prompt) =>
+          prompt.concat({ defaultTo, suggestions: [defaultTo] })
+        ),
+      justAccept: () => this.map((prompt) => prompt.concat({ defaultTo })),
+    };
+  };
 
   /**
    * Run after the user's input is found valid.
