@@ -273,7 +273,7 @@ Deno.test("Match->ignoreCase().matchAnywhere()", () => {
   p("three", "H");
 });
 
-Deno.test("match something; given empty string", () => {
+Deno.test("Match: something; given empty string", () => {
   const p1 = Prompt.from("Match->*().matchAnywhere(); empty string");
   const m1 = new Match(p1, "one");
   {
@@ -286,7 +286,7 @@ Deno.test("match something; given empty string", () => {
   }
 });
 
-Deno.test("match empty string; given empty string", () => {
+Deno.test("Match: empty string; given empty string", () => {
   const p1 = Prompt.from("Match->*().matchAnywhere(); empty string");
   const m1 = new Match(p1, "");
   {
