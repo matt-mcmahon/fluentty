@@ -3,11 +3,23 @@ import { brightWhite, dim, stripColor } from "../remote/colors.ts";
 import { Prompt } from "./prompt.ts";
 
 Deno.test("Prompt.prototype.suggestions - sort order", () => {
-  const a1 = [1, 2, 3];
-  const a2 = [4, 2, 5];
-  const actual = [...new Set([...a1, ...a2])];
-  const expected = [1, 2, 3, 4, 5];
-  assertEquals(actual, expected);
+  {
+    const a1 = [1, 2, 3];
+    const a2 = [4, 2, 5];
+    const actual = [...new Set([...a1, ...a2])];
+    const expected = [1, 2, 3, 4, 5];
+    assertEquals(actual, expected);
+  }
+
+  {
+    const [a, b, c, d, e, f] = ["a", "b", "c", "d", "e", "f"];
+    const p1 = Prompt.of({ message: "First", suggestions: [a, b, c, d] });
+    const p2 = Prompt.of({ message: "Second", suggestions: [b, e, f] });
+    const p3 = p1.concat(p2);
+    const actual = stripColor(p3.hint).trim();
+    const expected = `(a, b, c, d, e, f)`;
+    assertEquals(actual, expected);
+  }
 });
 
 Deno.test("Prompt.prototype.validate", () => {
