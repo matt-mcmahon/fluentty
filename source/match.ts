@@ -31,15 +31,13 @@ export class Match {
       const init = new RegExp(`^${input}`, flags);
       const part = new RegExp(`${input}`, flags);
       for (const option of options) {
-        if (full.test(option)) {
-          return option;
-        }
-        if (match === "init" && init.test(option)) {
-          maybes.push(option);
-        }
-        if (match === "part" && part.test(option)) {
-          maybes.push(option);
-        }
+        // always test full
+        if (full.test(option)) return option;
+        // empty input is only matching when full
+        else if (input === "") return false;
+        // only match if unique
+        else if (match === "init" && init.test(option)) maybes.push(option);
+        else if (match === "part" && part.test(option)) maybes.push(option);
       }
       return maybes.length === 1 ? maybes[0] : false;
     };

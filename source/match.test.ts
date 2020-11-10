@@ -3,19 +3,22 @@ import { Match } from "./match.ts";
 import { Prompt } from "./prompt.ts";
 import { Question } from "./question.ts";
 
-function makePass(q: Question) {
-  return (expected: string, input: string) => {
+function makeTests(q: Question): [
+  pass: (expected: string, input: string) => void,
+  fail: (expected: string, input: string) => void,
+] {
+  const pass = (expected: string, input: string) => {
     const actual = q.test(input);
     const message = `given input: ${Deno.inspect(input)}; ` +
       `should ${Deno.inspect(expected)}`;
     assertEquals(actual, expected, message);
   };
-}
 
-function makeFail(q: Question) {
-  return (_: unknown, input: string) => {
+  const fail = (_: unknown, input: string) => {
     assertThrows(() => q.test(input));
   };
+
+  return [pass, fail];
 }
 
 Deno.test("Match->matchCase().matchFull()", () => {
@@ -23,8 +26,7 @@ Deno.test("Match->matchCase().matchFull()", () => {
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.matchCase().matchFull();
 
-  const p = makePass(q1);
-  const f = makeFail(q1);
+  const [p, f] = makeTests(q1);
 
   p("one", "one");
   f("one", "on");
@@ -60,8 +62,7 @@ Deno.test("Match->matchCase().matchInitial()", () => {
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.matchCase().matchInitial();
 
-  const p = makePass(q1);
-  const f = makeFail(q1);
+  const [p, f] = makeTests(q1);
 
   p("one", "one");
   p("one", "on");
@@ -104,8 +105,7 @@ Deno.test("Match->matchCase().matchAnywhere()", () => {
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.matchCase().matchAnywhere();
 
-  const p = makePass(q1);
-  const f = makeFail(q1);
+  const [p, f] = makeTests(q1);
 
   p("one", "one");
   p("one", "on");
@@ -152,8 +152,7 @@ Deno.test("Match->ignoreCase().matchFull()", () => {
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.ignoreCase().matchFull();
 
-  const p = makePass(q1);
-  const f = makeFail(q1);
+  const [p, f] = makeTests(q1);
 
   p("one", "one");
   f("one", "on");
@@ -189,8 +188,7 @@ Deno.test("Match->ignoreCase().matchInitial()", () => {
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.ignoreCase().matchInitial();
 
-  const p = makePass(q1);
-  const f = makeFail(q1);
+  const [p, f] = makeTests(q1);
 
   p("one", "one");
   p("one", "on");
@@ -233,8 +231,7 @@ Deno.test("Match->ignoreCase().matchAnywhere()", () => {
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.ignoreCase().matchAnywhere();
 
-  const p = makePass(q1);
-  const f = makeFail(q1);
+  const [p, f] = makeTests(q1);
 
   p("one", "one");
   p("one", "on");
@@ -274,4 +271,31 @@ Deno.test("Match->ignoreCase().matchAnywhere()", () => {
   p("three", "Hre");
   p("three", "Hr");
   p("three", "H");
+});
+
+Deno.test("match something; given empty string", () => {
+  const p1 = Prompt.from("Match->*().matchAnywhere(); empty string");
+  const m1 = new Match(p1, "one");
+  {
+    const [, f] = makeTests(m1.ignoreCase().matchAnywhere());
+    f("one", "");
+  }
+  {
+    const [, f] = makeTests(m1.matchCase().matchAnywhere());
+    f("one", "");
+  }
+});
+
+Deno.test("match empty string; given empty string", () => {
+  const p1 = Prompt.from("Match->*().matchAnywhere(); empty string");
+  const m1 = new Match(p1, "");
+  {
+    const [p] = makeTests(m1.ignoreCase().matchAnywhere());
+    p("", "");
+  }
+
+  {
+    const [p] = makeTests(m1.matchCase().matchAnywhere());
+    p("", "");
+  }
 });
