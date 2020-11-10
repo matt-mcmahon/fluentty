@@ -25,7 +25,7 @@ export function configureTestProcess(script: string) {
     pretest?: (tp: TP) => Promise<TP>;
     posttest?: (tp: TP) => Promise<TP>;
   } = {}): Promise<TP> => {
-    const tempDir = await Deno.makeTempDir({ prefix: "test-" });
+    const tempDir = await Deno.makeTempDir({ prefix: "fluentty-" });
 
     const process = Deno.run({
       cmd: ["deno", "run", "--unstable", "--allow-all", script, tempDir],
