@@ -5,16 +5,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "attach to ...",
-      "port": 9229,
-      "request": "attach",
-      "skipFiles": [
-        "<node_internals>/**",
-        "deno.land/**"
-      ],
-      "type": "pwa-node"
-    },
-    {
       "name": "deno test ...",
       "type": "node",
       "request": "launch",
@@ -52,6 +42,16 @@
       },
       "port": 9229,
       "outputCapture": "std"
+    },
+    {
+      "name": "attach to ...",
+      "port": 9229,
+      "request": "attach",
+      "skipFiles": [
+        "<node_internals>/**",
+        "deno.land/**"
+      ],
+      "type": "pwa-node"
     }
   ]
 }
