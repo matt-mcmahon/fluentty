@@ -92,7 +92,7 @@ export function verifyWriteTextFile(filename: string) {
     const justCreate = () => Deno.writeTextFile(filename, data);
 
     const askOverwrite = async () =>
-      askYesNo(`File ${filename} exists, overwrite`)
+      askYesNo(`File ${filename} exists, overwrite?`)
         .IO()
         .then(ifYes(justCreate))
         .then(done);
