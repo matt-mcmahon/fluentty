@@ -122,7 +122,9 @@ export class Prompt {
       // merge these:
       formatters: [...this.formatters, ...prompt.formatters ?? []],
       sanitizers: [...this.sanitizers, ...prompt.sanitizers ?? []],
-      suggestions: [...this.suggestions, ...prompt.suggestions ?? []],
+      suggestions: Array.from(
+        new Set([...this.suggestions, ...prompt.suggestions ?? []]),
+      ),
       validators: [...this.validators, ...prompt.validators ?? []],
     });
   }
