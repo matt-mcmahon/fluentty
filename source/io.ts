@@ -28,28 +28,29 @@ export function forceWriteTextFile(filename: string, data: string) {
   return Deno.writeTextFile(filename, data);
 }
 
+const on = <A>(predicate: (a: A) => boolean) =>
+  (...actions: Array<<B>() => Promise<B | void>>) =>
+    (input: A) =>
+      predicate(input)
+        ? Promise.allSettled(actions.map((f) => f()))
+        : Promise.reject(`predicate(${Deno.inspect(input)}) failed`);
+
 /**
  * Takes an async function, `action`, then a string, `input`.
  * If input is "yes", runs the action.
  * Returns the string.
  */
-export function ifYes(action: () => Promise<void>) {
-  return async (input: string | boolean) => {
-    if (input === "yes" || input === true) await action();
-    return input;
-  };
+export function isYes(input: string | boolean) {
+  return input === "yes" || input === true;
 }
 
 /**
- * Takes an async function, `action`, then a string, `input`.
- * If input is "no", runs the action.
- * Returns the string.
+ * Takes any number of async functions, `actions`, then a string, `input`.
+ * If input is "no" or false, runs each action and returns an array of results,
+ * otherwise returns the input
  */
-export function ifNo(action: () => Promise<void>) {
-  return async (input: string | boolean) => {
-    if (input === "no" || input === false) await action();
-    return input;
-  };
+export function isNo(input: string | boolean) {
+  return input === "no" || input === false;
 }
 
 export const decodeText = (source: Deno.Reader) =>
@@ -80,7 +81,7 @@ export const stdout = encodeText(Deno.stdout);
 export const stdin = (accept?: number) => () => decodeText(Deno.stdin)(accept);
 
 /**
- * Ignores any input and returns Promise<void>
+ * Consumes any input and returns `Promise<void>`
  */
 export async function done() {}
 
@@ -94,12 +95,12 @@ export function verifyWriteTextFile(filename: string) {
     const askOverwrite = async () =>
       askYesNo(`File ${filename} exists, overwrite?`)
         .IO()
-        .then(ifYes(justCreate))
-        .then(done);
+        .then(on(isYes)(justCreate));
 
     await exists(filename)
-      .then(ifNo(justCreate))
-      .then(ifYes(askOverwrite));
+      .then(
+        on(isNo)(justCreate)
+        .or(isYes, askOverwrite)
   };
 }
 
