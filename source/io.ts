@@ -1,5 +1,6 @@
 import { exists } from "../remote/fs.ts";
 import { askYesNo } from "./question.ts";
+import { doIO } from "./answer.ts"
 
 const DEFAULT_BUFFER_SIZE = 5120;
 
