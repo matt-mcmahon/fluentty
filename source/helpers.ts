@@ -1,6 +1,4 @@
-import { AssertFunction } from "../remote/asserts.ts";
-import { done, getOutput, sendInput } from "./io.ts";
-import { JSONData, strip } from "./utils.ts";
+import { getOutput, noop, sendInput } from "./io.ts";
 
 export type TP = Readonly<{
   process: Deno.Process;
@@ -54,7 +52,7 @@ export function configureTestProcess(script: string, ...args: string[]) {
           const output = getUnconsumedOutput(tp);
           const error = getUnconsumedError(tp);
         }).then(posttest)
-        .then(done)
+        .then(noop)
         .finally(() => {
           try {
             process.stderr.close();
