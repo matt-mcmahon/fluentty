@@ -1,5 +1,6 @@
 import { blue, green, red } from "../remote/colors.ts";
-import { ifYes, IO, stdout } from "./io.ts";
+import { ifElse } from "../remote/functional.ts";
+import { IO, isYes, noop, stdout } from "./io.ts";
 import { askYesNo, question } from "./question.ts";
 
 const name = await question("Choose your Knight:")
@@ -19,7 +20,7 @@ const name = await question("Choose your Knight:")
 await askYesNo(`${name}, do you approach the bridge of death?`)
   .defaultTo("yes").andSuggest()
   .IO()
-  .then(ifYes(answerTheQuestions));
+  .then(ifElse(isYes, answerTheQuestions, noop));
 
 async function answerTheQuestions() {
   const questions = [
