@@ -1,5 +1,6 @@
 import { blue, green, red } from "../remote/colors.ts";
-import { ifYes, IO, stdout } from "./io.ts";
+import { ifElse } from "../remote/functional.ts";
+import { IO, isYes, noop, stdout } from "./io.ts";
 import { askYesNo, question } from "./question.ts";
 
 const name = await question("Choose your Knight:")
@@ -11,23 +12,20 @@ const name = await question("Choose your Knight:")
     "Sir Galahad the Pure",
     "Sir Bors",
     "Sir not Appearing in this Film",
-  )
-  .ignoreCase()
-  .matchPartial()
+  ).ignoreCase().matchAnywhere()
+  .defaultTo("Sir Lancelot the Brave").justAccept()
   .retry()
   .IO();
 
 await askYesNo(`${name}, do you approach the bridge of death?`)
+  .defaultTo("yes").andSuggest()
   .IO()
-  .then(ifYes(answerTheQuestions));
+  .then(ifElse(isYes, answerTheQuestions, noop));
 
 async function answerTheQuestions() {
   const questions = [
     question("What is your name?")
-      .validate((input) => {
-        const re = new RegExp(input, "i");
-        return re.test(name) ? name : false;
-      }),
+      .accept(name).ignoreCase().matchAnywhere(),
     question("What is your quest?")
       .retry()
       .validate((input) => /grail/i.test(input) ? input : false)
@@ -37,7 +35,7 @@ async function answerTheQuestions() {
       .accept("blue").ignoreCase().matchFull()
       .format((color) =>
         color === "red"
-          ? red("%s")
+          ? red(color)
           : color === "green"
           ? green(color)
           : color === "blue"
