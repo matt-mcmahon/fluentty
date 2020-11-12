@@ -1,1 +1,1 @@
-export { describe } from "https://raw.githubusercontent.com/matt-mcmahon/describe/master/module.ts";
+export { describe } from "https://raw.githubusercontent.com/matt-mcmahon/describe/v2.3.0/module.ts";

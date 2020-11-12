@@ -1,1 +1,1 @@
-export * from "../../functional/module.ts";
+export * from "https://raw.githubusercontent.com/matt-mcmahon/functional/next/module.ts";
