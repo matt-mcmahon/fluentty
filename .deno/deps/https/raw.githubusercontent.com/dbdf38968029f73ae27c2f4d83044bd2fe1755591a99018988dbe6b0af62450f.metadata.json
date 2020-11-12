@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "x-cache": "MISS, MISS",
+    "etag": "W/\"6703bf8c90062dc3ab6cc509619efedc4e51d6ef37c6424513c5b53ea3aedafb\"",
+    "cache-control": "max-age=300",
+    "x-xss-protection": "1; mode=block",
+    "accept-ranges": "bytes",
+    "x-github-request-id": "2334:4B6E:42A3F0:4AFCDE:5FADA004",
+    "date": "Thu, 12 Nov 2020 20:50:12 GMT",
+    "x-served-by": "cache-wdc5578-WDC",
+    "expires": "Thu, 12 Nov 2020 20:55:12 GMT",
+    "x-timer": "S1605214212.375962,VS0,VE85",
+    "x-cache-hits": "0, 0",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "x-frame-options": "deny",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "connection": "keep-alive",
+    "access-control-allow-origin": "*",
+    "source-age": "0",
+    "strict-transport-security": "max-age=31536000",
+    "content-type": "text/plain; charset=utf-8",
+    "vary": "Authorization,Accept-Encoding",
+    "x-fastly-request-id": "f538f50663ba10bc91c938a40f7bef7c95575992",
+    "x-content-type-options": "nosniff"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/functional/next/source/app/functions/curryN.ts"
+}

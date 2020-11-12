@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "etag": "W/\"1e873fd9b8a40b3b6a7b209a41d9de21d19832b5686514111481125da0ad949e\"",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "x-github-request-id": "59CA:72F5:20495D:247924:5FADA000",
+    "vary": "Authorization,Accept-Encoding",
+    "cache-control": "max-age=300",
+    "x-timer": "S1605214212.385423,VS0,VE100",
+    "access-control-allow-origin": "*",
+    "x-cache": "MISS, MISS",
+    "expires": "Thu, 12 Nov 2020 20:55:12 GMT",
+    "x-served-by": "cache-dca17778-DCA",
+    "accept-ranges": "bytes",
+    "date": "Thu, 12 Nov 2020 20:50:12 GMT",
+    "source-age": "0",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "deny",
+    "x-xss-protection": "1; mode=block",
+    "x-cache-hits": "0, 0",
+    "x-fastly-request-id": "69cece88d0c189330cc78b4fce35d1414a56f427",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "content-type": "text/plain; charset=utf-8",
+    "strict-transport-security": "max-age=31536000",
+    "connection": "keep-alive"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/functional/next/source/app/functions/always.ts"
+}

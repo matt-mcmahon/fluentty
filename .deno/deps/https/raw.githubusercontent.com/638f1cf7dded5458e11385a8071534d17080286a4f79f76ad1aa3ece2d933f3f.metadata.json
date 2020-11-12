@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "connection": "keep-alive",
+    "date": "Thu, 12 Nov 2020 20:50:12 GMT",
+    "x-timer": "S1605214212.344818,VS0,VE87",
+    "x-fastly-request-id": "b8dc16551ceeac959bea1cb95e5f0a41864a512b",
+    "x-cache": "MISS, MISS",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "etag": "W/\"697811a173a520f99f88e0d33faa7502486c9e20c2d8758a7ab506a4ccbb3274\"",
+    "x-served-by": "cache-wdc5575-WDC",
+    "x-xss-protection": "1; mode=block",
+    "vary": "Authorization,Accept-Encoding",
+    "strict-transport-security": "max-age=31536000",
+    "x-github-request-id": "B9C4:24BB:65DC3:7B294:5FADA003",
+    "expires": "Thu, 12 Nov 2020 20:55:12 GMT",
+    "x-cache-hits": "0, 0",
+    "x-content-type-options": "nosniff",
+    "cache-control": "max-age=300",
+    "accept-ranges": "bytes",
+    "x-frame-options": "deny",
+    "content-type": "text/plain; charset=utf-8",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "source-age": "0",
+    "access-control-allow-origin": "*"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/functional/next/source/app/functions/pipeV.ts"
+}
