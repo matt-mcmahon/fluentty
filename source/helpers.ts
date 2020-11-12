@@ -1,3 +1,4 @@
+import { always } from "../remote/functional.ts";
 import { getOutput, noop, sendInput } from "./io.ts";
 
 export type TP = Readonly<{
@@ -8,24 +9,24 @@ export type TP = Readonly<{
   end: () => Promise<void>;
 }>;
 
-const ifElse = <A, B, C>(predicate: (a: A) => Promise<boolean>) =>
-  (onTrue: (a: A) => B) =>
-    (onFalse: (a: A) => C) =>
-      async (a: A) => await predicate(a) ? onTrue(a) : onFalse(a);
-
 const decode = (value: Uint8Array) => new TextDecoder().decode(value);
 
 const getUnconsumedOutput = async (tp: TP) => {
   return tp.process.output()
-    .then(decode);
+    .then(decode)
+    .then((output) => {
+      return output.length > 0 &&
+        Promise.reject(`Error: unconsumed output\n\n${output}\n\n`);
+    });
 };
-
-const t = (tp: TP) =>
-  ifElse(async (a: Uint8Array) => a.length > 0)(() => tp)(Promise.reject);
 
 const getUnconsumedError = async (tp: TP) => {
   return tp.process.stderrOutput()
-    .then();
+    .then(decode)
+    .then((output) => {
+      return output.length > 0 &&
+        Promise.reject(`Error: unconsumed Error output\n\n${output}\n\n`);
+    });
 };
 
 export function configureTestProcess(script: string, ...args: string[]) {
@@ -48,24 +49,27 @@ export function configureTestProcess(script: string, ...args: string[]) {
      */
     const end = (): Promise<void> =>
       tp.process.status()
-        .then(({ success }) => {
-          const output = getUnconsumedOutput(tp);
-          const error = getUnconsumedError(tp);
-        }).then(posttest)
-        .then(noop)
-        .finally(() => {
-          try {
-            process.stderr.close();
-          } catch {}
-          try {
-            process.stdin.close();
-          } catch {}
-          try {
-            process.stdout.close();
-          } catch {}
-          try {
-            process.close();
-          } catch {}
+        .then(async ({ success }) => {
+          return Promise.all([
+            getUnconsumedOutput(tp),
+            getUnconsumedError(tp),
+          ]).then(always(tp))
+            .then(posttest)
+            .then(noop)
+            .finally(() => {
+              try {
+                process.stderr.close();
+              } catch {}
+              try {
+                process.stdin.close();
+              } catch {}
+              try {
+                process.stdout.close();
+              } catch {}
+              try {
+                process.close();
+              } catch {}
+            });
         });
 
     const tp: TP = {
