@@ -1,12 +1,17 @@
 import { exists } from "../remote/fs.ts";
+import { ifElse } from "../remote/functional.ts";
 import { askYesNo } from "./question.ts";
-import { doIO } from "./answer.ts"
 
 const DEFAULT_BUFFER_SIZE = 5120;
 
 interface Process<T> {
   IO: () => Promise<T> | T;
 }
+
+/**
+ * Consumes any input and returns `Promise<void>`
+ */
+export async function noop() {}
 
 /**
  * Does the given IO operations in order, and returns an array of results.
@@ -82,11 +87,6 @@ export const stdout = encodeText(Deno.stdout);
 export const stdin = (accept?: number) => () => decodeText(Deno.stdin)(accept);
 
 /**
- * Consumes any input and returns `Promise<void>`
- */
-export async function done() {}
-
-/**
  * If the `filename` exists, prompts the user before overwriting.
  */
 export function verifyWriteTextFile(filename: string) {
@@ -96,12 +96,10 @@ export function verifyWriteTextFile(filename: string) {
     const askOverwrite = async () =>
       askYesNo(`File ${filename} exists, overwrite?`)
         .IO()
-        .then(on(isYes)(justCreate));
+        .then(ifElse(isYes, justCreate, noop));
 
     await exists(filename)
-      .then(
-        on(isNo)(justCreate)
-        .or(isYes, askOverwrite)
+      .then(ifElse(isYes, askOverwrite, justCreate));
   };
 }
 
