@@ -121,12 +121,10 @@ Deno.test({
           console.error(`\ngiven: "${data}"\nerror: `, err);
         }
       }
-
-      await tp.end();
     } catch (err) {
       // Print Assertion Error
       console.error(err);
-
+    } finally {
       // End TP, Prints Sub-process Errors
       await tp.end();
     }
