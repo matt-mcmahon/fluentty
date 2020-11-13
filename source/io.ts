@@ -1,5 +1,5 @@
 import { exists } from "../remote/fs.ts";
-import { ifElse } from "../remote/functional.ts";
+import { identity, ifElse } from "../remote/functional.ts";
 import { askYesNo } from "./question.ts";
 
 const DEFAULT_BUFFER_SIZE = 5120;
@@ -8,9 +8,7 @@ interface Process<T> {
   IO: () => Promise<T> | T;
 }
 
-/**
- * Consumes any input and returns `Promise<void>`
- */
+/** Consumes any input and returns `Promise<void>` */
 export async function noop() {}
 
 /**
@@ -26,10 +24,7 @@ export async function IO<T>(...processes: Process<T>[]) {
   return results;
 }
 
-/**
- * Overwrites `filename` even if it exists, without prompting the user.
- */
-
+/** Overwrites `filename` even if it exists, without prompting the user. */
 export function forceWriteTextFile(filename: string, data: string) {
   return Deno.writeTextFile(filename, data);
 }
@@ -41,22 +36,24 @@ const on = <A>(predicate: (a: A) => boolean) =>
         ? Promise.allSettled(actions.map((f) => f()))
         : Promise.reject(`predicate(${Deno.inspect(input)}) failed`);
 
-/**
- * Takes an async function, `action`, then a string, `input`.
- * If input is "yes", runs the action.
- * Returns the string.
- */
-export function isYes(input: string | boolean) {
-  return input === "yes" || input === true;
+/** Returns true iff `input === "yes"` */
+export function isYes(input: unknown): input is "yes" {
+  return input === "yes";
 }
 
-/**
- * Takes any number of async functions, `actions`, then a string, `input`.
- * If input is "no" or false, runs each action and returns an array of results,
- * otherwise returns the input
- */
-export function isNo(input: string | boolean) {
-  return input === "no" || input === false;
+/** Returns true iff `input === "no"` */
+export function isNo(input: unknown): input is "no" {
+  return input === "no";
+}
+
+/** Returns true iff `input === true` */
+export function isTrue(input: unknown): input is true {
+  return input === true;
+}
+
+/** Returns true iff `input === false` */
+export function isFalse(input: unknown): input is false {
+  return input === false;
 }
 
 export const decodeText = (source: Deno.Reader) =>
@@ -99,7 +96,7 @@ export function verifyWriteTextFile(filename: string) {
         .then(ifElse(isYes, justCreate, noop));
 
     await exists(filename)
-      .then(ifElse(isYes, askOverwrite, justCreate));
+      .then(ifElse(isTrue, askOverwrite, justCreate));
   };
 }
 
