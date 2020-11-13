@@ -34,8 +34,21 @@ export function configureTestProcess(script: string, ...args: string[]) {
     pretest?: (tp: TP) => Promise<TP>;
     posttest?: (tp: TP) => Promise<TP>;
   } = {}): Promise<TP> => {
+    const useUnstable = Deno.env.get("USE_UNSTABLE") ?? "";
+    const testPermissions = Deno.env.get("TEST_PERMISSIONS")?.split(" ") ?? [];
+    const importMap = Deno.env.get("IMPORT_MAP");
+    const importMapOptions = importMap ? [`--import-map`, importMap] : [];
+
     const process = Deno.run({
-      cmd: ["deno", "run", "--unstable", "--allow-all", script, ...args],
+      cmd: [
+        "deno",
+        "run",
+        useUnstable,
+        ...testPermissions,
+        ...importMapOptions,
+        script,
+        ...args,
+      ],
       stderr: "piped",
       stdin: "piped",
       stdout: "piped",

@@ -1,11 +1,10 @@
 # Include, then immediately export, environment variables in .env file.
 # These variables will be available to the Deno CLI.
-ifneq ($(wildcard ".env"),)
+ifneq ($(wildcard .env),)
 include .env
 endif
 
 export
-
 
 # These settings can be safely disabled by setting the VARIABLE_NAME to nothing
 # in your deployment's .env file. For template, setting the following would
@@ -13,18 +12,19 @@ export
 #
 # DENO_DIR=
 #
-DENO_BUNDLE_FILE       ?= fluentty.js
+DENO_BUNDLE_FILE       ?= bundle.js
 DENO_DEPENDENCIES_FILE ?= dependencies.ts
 DENO_DIR               ?= .deno
 DENO_MAIN              ?= module.ts
 DENO_SOURCE_DIR        ?= source
 IMPORT_MAP             ?= import_map.json
-LOCK_FILE              ?= lock_file.json
 NPM                    ?= npm
+
+LOCK_FILE              ?=
 RUN_PERMISSIONS        ?=
-TEST_PERMISSIONS       ?= --allow-run --allow-read --allow-write
-USE_CACHE              ?= --cached-only
-USE_UNSTABLE           ?= --unstable
+TEST_PERMISSIONS       ?=
+USE_CACHE              ?=
+USE_UNSTABLE           ?=
 
 # The default values for these settings are meant to be easily overwritten by
 # your project's .env file.

@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "date": "Fri, 13 Nov 2020 23:03:29 GMT",
+    "connection": "keep-alive",
+    "etag": "W/\"66b4319bae70e475c2efa82a0219edc6c6ff3ee53df877c56aa91f519f5b1a79\"",
+    "vary": "Authorization,Accept-Encoding",
+    "expires": "Fri, 13 Nov 2020 23:08:29 GMT",
+    "x-content-type-options": "nosniff",
+    "content-type": "text/plain; charset=utf-8",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "x-frame-options": "deny",
+    "x-cache-hits": "0, 1",
+    "x-cache": "MISS, HIT",
+    "x-timer": "S1605308610.607553,VS0,VE76",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "cache-control": "max-age=300",
+    "strict-transport-security": "max-age=31536000",
+    "source-age": "0",
+    "access-control-allow-origin": "*",
+    "accept-ranges": "bytes",
+    "x-github-request-id": "3D18:1AB1:1FC3F3:23DEF8:5FAF0960",
+    "x-fastly-request-id": "91afa52c07f4e7c59d3d788e81377ea2db2988d5",
+    "x-xss-protection": "1; mode=block",
+    "x-served-by": "cache-wdc5573-WDC"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/functional/next/module.ts"
+}

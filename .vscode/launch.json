@@ -17,6 +17,7 @@
         "--allow-all",
         "${file}"
       ],
+      "envFile": "${workspaceFolder}/.env",
       "env": {
         "DENO_DIR": "${workspaceFolder}/.deno",
         "RUST_BACKTRACE": "full"
@@ -37,6 +38,7 @@
         "--allow-all",
         "${file}"
       ],
+      "envFile": "${workspaceFolder}/.env",
       "env": {
         "DENO_DIR": "${workspaceFolder}/.deno",
       },
@@ -49,8 +51,9 @@
       "request": "attach",
       "skipFiles": [
         "<node_internals>/**",
-        "deno.land/**"
+        "deno:"
       ],
+      "envFile": "${workspaceFolder}/.env",
       "type": "pwa-node"
     }
   ]
