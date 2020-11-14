@@ -48,14 +48,50 @@ const closeAll = (process: Deno.Process) =>
     } catch { /*do nothing*/ }
   };
 
+const getEnvThen: (e: string, map?: (s: string) => string[]) => [] | string[] =
+  (
+    envVar,
+    map = (s) => [s],
+  ) => {
+    const value = Deno.env.get(envVar);
+    return value ? map(value) : [];
+  };
+
 /** Runs the given script as a new process */
 export function configureTestProcess(scriptPath: string, ...args: string[]) {
   return async ({ pretest, posttest }: {
     pretest?: (tp: TP) => Promise<TP>;
     posttest?: (tp: TP) => Promise<TP>;
   } = {}): Promise<TP> => {
+    const useUnstable = getEnvThen(
+      "USE_UNSTABLE",
+    );
+    const importMap = getEnvThen(
+      "IMPORT_MAP",
+      (importMap) => [`--import-map`, importMap],
+    );
+    const lockOptions = getEnvThen(
+      "LOCK_FILE",
+      (lockFile) => ["--lock", lockFile, "--cached-only"],
+    );
+    const testPermissions = getEnvThen(
+      "TEST_PERMISSIONS",
+      (s) => s.split(" "),
+    );
+
+    const cmd = [
+      "deno",
+      "run",
+      ...useUnstable,
+      ...testPermissions,
+      ...importMap,
+      ...lockOptions,
+      scriptPath,
+      ...args,
+    ];
+
     const process = Deno.run({
-      cmd: ["deno", "run", "--unstable", "--allow-all", scriptPath, ...args],
+      cmd,
       stderr: "piped",
       stdin: "piped",
       stdout: "piped",
