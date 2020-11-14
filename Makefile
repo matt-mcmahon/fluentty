@@ -1,47 +1,39 @@
 # Include, then immediately export, environment variables in .env file.
 # These variables will be available to the Deno CLI.
-ifneq ($(wildcard ".env"),)
+ifneq ($(wildcard .env),)
 include .env
 endif
 
 export
 
-
 # These settings can be safely disabled by setting the VARIABLE_NAME to nothing
-# in your deployment's .env file. For template, setting the following would
-# disable the local Deno cache in favor of Deno's global cache:
+# in your deployment's .env file. For template, setting DENO_DIR as the below
+# will project's local Deno cache in favor of Deno's global cache. If you delete
+# the `DENO_DIR=` line instead, the .env file would NOT disable the cache, and
+# instead use the default value, `.deno`.
 #
 # DENO_DIR=
 #
-DENO_BUNDLE_FILE       ?= fluentty.js
+DENO_BUNDLE_FILE       ?= bundle.js
 DENO_DEPENDENCIES_FILE ?= dependencies.ts
 DENO_DIR               ?= .deno
 DENO_MAIN              ?= module.ts
 DENO_SOURCE_DIR        ?= source
+REMOTE_DIRS            ?= remote
 IMPORT_MAP             ?= import_map.json
 LOCK_FILE              ?= lock_file.json
 NPM                    ?= npm
 RUN_PERMISSIONS        ?=
-TEST_PERMISSIONS       ?= --allow-run --allow-read --allow-write
-USE_CACHE              ?= --cached-only
-USE_UNSTABLE           ?= --unstable
+TEST_PERMISSIONS       ?=
+USE_UNSTABLE           ?=
 
-# The default values for these settings are meant to be easily overwritten by
-# your project's .env file.
-#
-# Do NOT set these values to nothing.
-#
+# Not directly configurable:
 DENO_DIR_ABS           := $(PWD)/$(DENO_DIR)
-
-GEN_DIR                ?= /dev/null
-
-REMOTE_DIRS            := remote
-
+GEN_DIR                := /dev/null
+OPTIONAL_EXTENSIONS    := (\.d.ts)|(\.ts)|(\.js)
 PRODUCTION_FILES       := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts" -not -name "*.test.ts")
 REMOTE_DEPENDENCIES    := $(shell find "$(REMOTE_DIRS)"      -type f -name "*.ts")
 SOURCE_FILES           := $(shell find "$(DENO_SOURCE_DIR)"  -type f -name "*.ts")
-
-OPTIONAL_EXTENSIONS    := (\.d.ts)|(\.ts)|(\.js)
 
 ifneq ($(wildcard $(IMPORT_MAP)),)
 IMPORT_MAP_OPTIONS     := --importmap $(IMPORT_MAP)
@@ -49,6 +41,12 @@ USE_UNSTABLE           := --unstable
 else
 undefine IMPORT_MAP
 undefine IMPORT_MAP_OPTIONS
+endif
+
+ifneq ($(DENO_DIR),)
+USE_CACHE              ?= --cached-only
+else
+USE_CACHE              ?=
 endif
 
 ifneq ($(LOCK_FILE),)
