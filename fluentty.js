@@ -112,6 +112,11 @@ function question(message) {
 function askYesNo(message) {
     return question(message).suggest("yes", "no").ignoreCase().matchInitial().retry();
 }
+function assert(expr, msg = "") {
+    if (!expr) {
+        throw new DenoStdInternalError(msg);
+    }
+}
 let NATIVE_OS = "linux";
 const navigator = globalThis.navigator;
 if (globalThis.Deno != null) {
@@ -120,11 +125,6 @@ if (globalThis.Deno != null) {
     NATIVE_OS = "windows";
 }
 const isWindows = NATIVE_OS == "windows";
-function assert(expr, msg = "") {
-    if (!expr) {
-        throw new DenoStdInternalError(msg);
-    }
-}
 const _win32 = function() {
     const sep = "\\";
     const delimiter = ";";
@@ -1769,8 +1769,6 @@ const gather = (n, f, previous = [])=>{
     });
     return curried;
 };
-const ifElse = (predicate, whenTrue, whenFalse)=>(x)=>predicate(x) ? whenTrue(x) : whenFalse(x)
-;
 const isArray = Array.isArray;
 const isDate = (a)=>a instanceof Date
 ;
