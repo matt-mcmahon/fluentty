@@ -5,7 +5,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "deno test ...",
+      "name": "deno test",
       "type": "node",
       "request": "launch",
       "cwd": "${workspaceFolder}",
@@ -13,10 +13,19 @@
       "runtimeArgs": [
         "test",
         "--inspect-brk",
+        "--cached-only",
         "--unstable",
-        "--allow-all",
+        "--allow-run",
+        "--allow-read",
+        "--allow-write",
+        "--allow-env",
+        "--lock",
+        "lock_file.json",
+        "--import-map",
+        "import_map.json",
         "${file}"
       ],
+      "envFile": "${workspaceFolder}/.env",
       "env": {
         "DENO_DIR": "${workspaceFolder}/.deno",
         "RUST_BACKTRACE": "full"
@@ -25,7 +34,7 @@
       "outputCapture": "std"
     },
     {
-      "name": "deno run ...",
+      "name": "deno run",
       "type": "node",
       "request": "launch",
       "cwd": "${workspaceFolder}",
@@ -33,10 +42,19 @@
       "runtimeArgs": [
         "run",
         "--inspect-brk",
+        "--cached-only",
         "--unstable",
-        "--allow-all",
+        "--allow-run",
+        "--allow-read",
+        "--allow-write",
+        "--allow-env",
+        "--lock",
+        "lock_file.json",
+        "--import-map",
+        "import_map.json",
         "${file}"
       ],
+      "envFile": "${workspaceFolder}/.env",
       "env": {
         "DENO_DIR": "${workspaceFolder}/.deno",
       },
@@ -51,6 +69,7 @@
         "<node_internals>/**",
         "deno.land/**"
       ],
+      "envFile": "${workspaceFolder}/.env",
       "type": "pwa-node"
     }
   ]
