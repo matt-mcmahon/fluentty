@@ -1,17 +1,19 @@
-import { assertEquals, assertThrows } from "../remote/asserts.ts";
+import type { Assert, Inspect } from "../remote/describe.ts";
+import { describe } from "../remote/describe.ts";
+import { assertThrows } from "../remote/asserts.ts";
 import { Match } from "./match.ts";
 import { Prompt } from "./prompt.ts";
 import { Question } from "./question.ts";
 
-function makeTests(q: Question): [
+function makeTests(q: Question, assert: Assert, inspect: Inspect): [
   pass: (expected: string, input: string) => void,
   fail: (expected: string, input: string) => void,
 ] {
   const pass = (expected: string, input: string) => {
     const actual = q.test(input);
-    const message = `given input: ${Deno.inspect(input)}; ` +
-      `should ${Deno.inspect(expected)}`;
-    assertEquals(actual, expected, message);
+    const message = inspect`expected:\n\t${expected}\ngot:\n\t${actual}`;
+
+    assert({ actual, expected, message });
   };
 
   const fail = (_: unknown, input: string) => {
@@ -21,12 +23,12 @@ function makeTests(q: Question): [
   return [pass, fail];
 }
 
-Deno.test("Match->matchCase().matchFull()", () => {
+describe("Match->matchCase().matchFull()", ({ assert, inspect }) => {
   const p1 = Prompt.from("match test 1");
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.matchCase().matchFull();
 
-  const [p, f] = makeTests(q1);
+  const [p, f] = makeTests(q1, assert, inspect);
 
   p("one", "one");
   f("one", "on");
@@ -57,12 +59,12 @@ Deno.test("Match->matchCase().matchFull()", () => {
   f("three", "tHree");
 });
 
-Deno.test("Match->matchCase().matchInitial()", () => {
+describe("Match->matchCase().matchInitial()", ({ assert, inspect }) => {
   const p1 = Prompt.from("match test 1");
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.matchCase().matchInitial();
 
-  const [p, f] = makeTests(q1);
+  const [p, f] = makeTests(q1, assert, inspect);
 
   p("one", "one");
   p("one", "on");
@@ -100,12 +102,12 @@ Deno.test("Match->matchCase().matchInitial()", () => {
   f("three", "Th");
 });
 
-Deno.test("Match->matchCase().matchAnywhere()", () => {
+describe("Match->matchCase().matchAnywhere()", ({ assert, inspect }) => {
   const p1 = Prompt.from("match test 1");
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.matchCase().matchAnywhere();
 
-  const [p, f] = makeTests(q1);
+  const [p, f] = makeTests(q1, assert, inspect);
 
   p("one", "one");
   p("one", "on");
@@ -147,12 +149,12 @@ Deno.test("Match->matchCase().matchAnywhere()", () => {
   f("three", "H");
 });
 
-Deno.test("Match->ignoreCase().matchFull()", () => {
+describe("Match->ignoreCase().matchFull()", ({ assert, inspect }) => {
   const p1 = Prompt.from("match test 1");
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.ignoreCase().matchFull();
 
-  const [p, f] = makeTests(q1);
+  const [p, f] = makeTests(q1, assert, inspect);
 
   p("one", "one");
   f("one", "on");
@@ -183,12 +185,12 @@ Deno.test("Match->ignoreCase().matchFull()", () => {
   p("three", "tHree");
 });
 
-Deno.test("Match->ignoreCase().matchInitial()", () => {
+describe("Match->ignoreCase().matchInitial()", ({ assert, inspect }) => {
   const p1 = Prompt.from("match test 1");
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.ignoreCase().matchInitial();
 
-  const [p, f] = makeTests(q1);
+  const [p, f] = makeTests(q1, assert, inspect);
 
   p("one", "one");
   p("one", "on");
@@ -226,12 +228,12 @@ Deno.test("Match->ignoreCase().matchInitial()", () => {
   p("three", "Th");
 });
 
-Deno.test("Match->ignoreCase().matchAnywhere()", () => {
+describe("Match->ignoreCase().matchAnywhere()", ({ assert, inspect }) => {
   const p1 = Prompt.from("match test 1");
   const m1 = new Match(p1, "one", "two", "three");
   const q1 = m1.ignoreCase().matchAnywhere();
 
-  const [p, f] = makeTests(q1);
+  const [p, f] = makeTests(q1, assert, inspect);
 
   p("one", "one");
   p("one", "on");
@@ -273,29 +275,29 @@ Deno.test("Match->ignoreCase().matchAnywhere()", () => {
   p("three", "H");
 });
 
-Deno.test("Match: something; given empty string", () => {
+describe("Match: something; given empty string", ({ assert, inspect }) => {
   const p1 = Prompt.from("Match->*().matchAnywhere(); empty string");
   const m1 = new Match(p1, "one");
   {
-    const [, f] = makeTests(m1.ignoreCase().matchAnywhere());
+    const [, f] = makeTests(m1.ignoreCase().matchAnywhere(), assert, inspect);
     f("one", "");
   }
   {
-    const [, f] = makeTests(m1.matchCase().matchAnywhere());
+    const [, f] = makeTests(m1.matchCase().matchAnywhere(), assert, inspect);
     f("one", "");
   }
 });
 
-Deno.test("Match: empty string; given empty string", () => {
+describe("Match: empty string; given empty string", ({ assert, inspect }) => {
   const p1 = Prompt.from("Match->*().matchAnywhere(); empty string");
   const m1 = new Match(p1, "");
   {
-    const [p] = makeTests(m1.ignoreCase().matchAnywhere());
+    const [p] = makeTests(m1.ignoreCase().matchAnywhere(), assert, inspect);
     p("", "");
   }
 
   {
-    const [p] = makeTests(m1.matchCase().matchAnywhere());
+    const [p] = makeTests(m1.matchCase().matchAnywhere(), assert, inspect);
     p("", "");
   }
 });
