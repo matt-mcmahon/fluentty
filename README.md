@@ -44,7 +44,7 @@ async function answerTheQuestions() {
       .accept("blue").ignoreCase().matchFull()
       .format((color) =>
         color === "red"
-          ? red("%s")
+          ? red(color)
           : color === "green"
           ? green(color)
           : color === "blue"
@@ -123,7 +123,10 @@ ask the user a series of questions. Specifically:
    shows in that color when output on the terminal. Users who enter an invalid
    answer will presumably be cast into the *Gorge of Eternal Peril*.
 
-   ![Sir Robin, the Not-Quite-So-Brave-as-Sir-Lancelot, is flung into the *Gorge of Eternal Peril* after forgetting his favorite color.](https://i.makeagif.com/media/2-07-2016/-FG4XC.gif)
+   ![
+     Sir Robin, the Not-Quite-So-Brave-as-Sir-Lancelot, is flung into the
+     *Gorge of Eternal Peril* after forgetting his favorite color.
+    ][gif]
 
 6. Our bonus question, "African or European?", is a case-sensitive question.
    Our entry, "eu", should fail a case-sensitive match, but we're sanitizing our
@@ -132,3 +135,4 @@ ask the user a series of questions. Specifically:
 
 [fluent]: https://dev.to/shoupn/what-is-a-fluent-api-2m4f
 [deno]: https://deno.land/
+[gif]: https://i.makeagif.com/media/2-07-2016/-FG4XC.gif
