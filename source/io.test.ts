@@ -1,7 +1,7 @@
-import { assertEquals } from "../remote/asserts.ts";
+import { describe } from "../remote/describe.ts";
 import { IO } from "./io.ts";
 
-Deno.test(`IO`, async () => {
+describe(`IO`, async ({ assert }) => {
   class Process<T> {
     #value: T;
     constructor(t: T) {
@@ -23,6 +23,6 @@ Deno.test(`IO`, async () => {
       "two",
       "three",
     ];
-    assertEquals(actual, expected);
+    assert({ actual, expected });
   }
 });
