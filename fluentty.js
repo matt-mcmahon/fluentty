@@ -112,11 +112,6 @@ function question(message) {
 function askYesNo(message) {
     return question(message).suggest("yes", "no").ignoreCase().matchInitial().retry();
 }
-function assert(expr, msg = "") {
-    if (!expr) {
-        throw new DenoStdInternalError(msg);
-    }
-}
 let NATIVE_OS = "linux";
 const navigator = globalThis.navigator;
 if (globalThis.Deno != null) {
@@ -125,6 +120,11 @@ if (globalThis.Deno != null) {
     NATIVE_OS = "windows";
 }
 const isWindows = NATIVE_OS == "windows";
+function assert(expr, msg = "") {
+    if (!expr) {
+        throw new DenoStdInternalError(msg);
+    }
+}
 const _win32 = function() {
     const sep = "\\";
     const delimiter = ";";
@@ -1769,6 +1769,8 @@ const gather = (n, f, previous = [])=>{
     });
     return curried;
 };
+const ifElse = (predicate, whenTrue, whenFalse)=>(x)=>predicate(x) ? whenTrue(x) : whenFalse(x)
+;
 const isArray = Array.isArray;
 const isDate = (a)=>a instanceof Date
 ;
@@ -1821,18 +1823,42 @@ const closeAll = (process)=>()=>{
         }
     }
 ;
+const getEnvThen = (envVar, map = (s)=>[
+        s
+    ]
+)=>{
+    const value1 = Deno.env.get(envVar);
+    return value1 ? map(value1) : [];
+};
 export function configureTestProcess(scriptPath, ...args) {
     return async ({ pretest , posttest  } = {
     })=>{
+        const useUnstable = getEnvThen("USE_UNSTABLE");
+        const importMap = getEnvThen("IMPORT_MAP", (importMap1)=>[
+                `--import-map`,
+                importMap1
+            ]
+        );
+        const lockOptions = getEnvThen("LOCK_FILE", (lockFile)=>[
+                "--lock",
+                lockFile,
+                "--cached-only"
+            ]
+        );
+        const testPermissions = getEnvThen("TEST_PERMISSIONS", (s)=>s.split(" ")
+        );
+        const cmd = [
+            "deno",
+            "run",
+            ...useUnstable,
+            ...testPermissions,
+            ...importMap,
+            ...lockOptions,
+            scriptPath,
+            ...args, 
+        ];
         const process = Deno.run({
-            cmd: [
-                "deno",
-                "run",
-                "--unstable",
-                "--allow-all",
-                scriptPath,
-                ...args
-            ],
+            cmd,
             stderr: "piped",
             stdin: "piped",
             stdout: "piped"
