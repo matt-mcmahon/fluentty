@@ -1,36 +1,39 @@
+// deno-lint-ignore-file
 export type Action<A, B> = {
   (a: A): Promise<B>;
 };
 
-interface Predicate {
-  (input: string): boolean;
+interface Predicate<A> {
+  (input: A): boolean;
 }
 
-interface DoneUnlessIf {
-  if: AddIf;
-  done(input: string): Promise<number>[];
+interface Done<A, B> {
+  (input: A): Promise<B[]>;
 }
 
-interface Exec {
-  (...actions: Action<string, number>[]): DoneUnlessIf;
+interface Exec<A, B> {
+  exec(...actions: Action<A, B>[]): DoneUnlessIf<A, B>;
 }
 
-interface AddIf {
-  (previous: Done): {
-    if: (predicate: Predicate) => { exec: Exec };
-  };
+interface DoneUnlessIf<A, B> {
+  if(predicate: Predicate<A>): Exec<A, B>;
+  done(): (input: A) => Promise<B[]>;
 }
 
-interface Done {
-  (input: string): Promise<number[]>;
+interface IfOnly<A, B> {
+  if(predicate: Predicate<A>): Exec<A, B>;
 }
 
-function addIf(previous?: Done) {
+interface AddIf<A, B> {
+  (previous?: Done<A, B>): IfOnly<A, B>;
+}
+
+const addIf: AddIf<string, number> = (previous) => {
   return {
-    if: (predicate: Predicate) => {
+    if: (predicate) => {
       return {
-        exec(...actions: Action<string, number>[]) {
-          const done = (): Done =>
+        exec(...actions) {
+          const done = () =>
             (input: string) =>
               predicate(input)
                 ? Promise.all(actions.map((f) => f(input)))
@@ -42,7 +45,7 @@ function addIf(previous?: Done) {
       };
     },
   };
-}
+};
 
 export const doIO = addIf();
 
