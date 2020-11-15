@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "x-frame-options": "deny",
+    "x-cache": "MISS, MISS",
+    "x-cache-hits": "0, 0",
+    "x-timer": "S1605463777.363881,VS0,VE484",
+    "connection": "keep-alive",
+    "content-type": "text/plain; charset=utf-8",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "expires": "Sun, 15 Nov 2020 18:14:37 GMT",
+    "strict-transport-security": "max-age=31536000",
+    "access-control-allow-origin": "*",
+    "vary": "Authorization,Accept-Encoding",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "cache-control": "max-age=300",
+    "accept-ranges": "bytes",
+    "x-github-request-id": "DC44:0FC8:4AC1CA:554F89:5FB16EE0",
+    "x-fastly-request-id": "6f7ac0ccaba58baa1148cce69694353687852d1f",
+    "date": "Sun, 15 Nov 2020 18:09:37 GMT",
+    "x-content-type-options": "nosniff",
+    "x-xss-protection": "1; mode=block",
+    "x-served-by": "cache-dca17767-DCA",
+    "source-age": "0",
+    "etag": "W/\"c1b532823621be515c83297ff3f28b61a5944545ab6201720ec053f1f74e66ae\""
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/describe/v2.4.0/module.ts"
+}

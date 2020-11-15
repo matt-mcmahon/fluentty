@@ -24,5 +24,11 @@
   "https://deno.land/std@0.77.0/path/separator.ts": "9dd15d46ff84a16e13554f56af7fee1f85f8d0f379efbbe60ac066a60561f036",
   "https://deno.land/std@0.77.0/path/win32.ts": "ac04d13b10e47655472256666d60d8e0bb62a4bf4532be1c493b1444f5a76464",
   "https://deno.land/std@0.77.0/testing/_diff.ts": "48a34be6be2721bafe48033a46e8d80c44d5458ea862e5ffdb9083d8c2b97a46",
-  "https://deno.land/std@0.77.0/testing/asserts.ts": "2887fa46577bd0f8c9f6555a9abb65f0765d1fd943d3ed4593cdbc5f5a8105d8"
+  "https://deno.land/std@0.77.0/testing/asserts.ts": "2887fa46577bd0f8c9f6555a9abb65f0765d1fd943d3ed4593cdbc5f5a8105d8",
+  "https://raw.githubusercontent.com/matt-mcmahon/describe/v2.4.0/module.ts": "5fa40188108b7afc35d075ea7498aad2caba4047f8a355789124e77da04efe8f",
+  "https://raw.githubusercontent.com/matt-mcmahon/describe/v2.4.0/remote/asserts.ts": "0fbad6b061a339298d0e170e6ac2f8184457cea2578ab001fe33b2f206771893",
+  "https://raw.githubusercontent.com/matt-mcmahon/describe/v2.4.0/source/app/describe.ts": "9b2229f74630c61269767d750a18b68401cef691c91cda4c4aebcc53bf8eb22b",
+  "https://raw.githubusercontent.com/matt-mcmahon/describe/v2.4.0/source/app/utils.ts": "2604805ada99f63db6b60de57419d5111aedeabf1be7c5bd7aea067d2f6b1d9b",
+  "https://raw.githubusercontent.com/matt-mcmahon/describe/v2.4.0/source/lib/inspect.ts": "740d2d4b752dda011d836ceee8ce147a8a4e50a302201a8098660d9123f72beb",
+  "https://raw.githubusercontent.com/matt-mcmahon/describe/v2.4.0/source/lib/test-framework.ts": "1d4e829bcdde4b3844a3c853bee09a7c053ed9f93a5b344e635af52d3730d16f"
 }
