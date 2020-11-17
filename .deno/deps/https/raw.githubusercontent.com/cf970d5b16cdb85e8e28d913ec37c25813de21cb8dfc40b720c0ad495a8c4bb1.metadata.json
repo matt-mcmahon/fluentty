@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "accept-ranges": "bytes",
+    "x-fastly-request-id": "57c02fe414ed834a93fc7384faf11564743039a7",
+    "x-content-type-options": "nosniff",
+    "x-served-by": "cache-wdc5576-WDC",
+    "content-type": "text/plain; charset=utf-8",
+    "x-github-request-id": "F59C:4BCE:7DCA33:8C82B6:5FB2CD71",
+    "x-cache-hits": "0, 0",
+    "connection": "keep-alive",
+    "vary": "Authorization,Accept-Encoding",
+    "expires": "Mon, 16 Nov 2020 19:10:21 GMT",
+    "x-cache": "MISS, MISS",
+    "source-age": "0",
+    "x-timer": "S1605553522.761333,VS0,VE87",
+    "access-control-allow-origin": "*",
+    "etag": "W/\"690d3bf83b77a83881cf0e7d3b5613bd525805ccfbcf438b40da77f79dca0ec3\"",
+    "x-frame-options": "deny",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "cache-control": "max-age=300",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "strict-transport-security": "max-age=31536000",
+    "x-xss-protection": "1; mode=block",
+    "date": "Mon, 16 Nov 2020 19:05:21 GMT"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/functional/next/source/app/functions/tap.ts"
+}

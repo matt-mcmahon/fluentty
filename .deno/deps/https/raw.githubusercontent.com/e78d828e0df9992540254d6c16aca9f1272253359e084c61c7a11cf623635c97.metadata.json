@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "connection": "keep-alive",
+    "etag": "W/\"8cf43df49f9437fa52e76701bdaf25ba05f90266c93beca30e290d242a434d76\"",
+    "expires": "Mon, 16 Nov 2020 19:10:21 GMT",
+    "access-control-allow-origin": "*",
+    "content-type": "text/plain; charset=utf-8",
+    "x-cache": "MISS, MISS",
+    "vary": "Authorization,Accept-Encoding",
+    "x-github-request-id": "8BDC:0C17:362D83:3E57FF:5FB2CD71",
+    "source-age": "0",
+    "x-xss-protection": "1; mode=block",
+    "x-fastly-request-id": "d8bd48a728e5cb82f2d21b464e463f97790a7ce0",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "x-frame-options": "deny",
+    "x-cache-hits": "0, 0",
+    "x-served-by": "cache-dca17750-DCA",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "cache-control": "max-age=300",
+    "accept-ranges": "bytes",
+    "date": "Mon, 16 Nov 2020 19:05:21 GMT",
+    "x-timer": "S1605553522.741947,VS0,VE100",
+    "strict-transport-security": "max-age=31536000",
+    "x-content-type-options": "nosniff"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/functional/next/source/app/functions/clone.ts"
+}

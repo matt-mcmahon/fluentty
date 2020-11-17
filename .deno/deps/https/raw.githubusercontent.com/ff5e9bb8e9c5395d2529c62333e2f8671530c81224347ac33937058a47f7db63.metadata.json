@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "x-fastly-request-id": "aaa964cc9fd71e681da399c24c35bff2052dbd48",
+    "cache-control": "max-age=300",
+    "x-timer": "S1605553522.764225,VS0,VE91",
+    "connection": "keep-alive",
+    "content-type": "text/plain; charset=utf-8",
+    "date": "Mon, 16 Nov 2020 19:05:21 GMT",
+    "access-control-allow-origin": "*",
+    "etag": "W/\"44e793a129bd09487e489155832a0184d4fbb451754260346282816c418386f9\"",
+    "x-content-type-options": "nosniff",
+    "x-github-request-id": "2EF2:24EF:6E2ED7:7D2142:5FB2CD71",
+    "vary": "Authorization,Accept-Encoding",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "x-xss-protection": "1; mode=block",
+    "strict-transport-security": "max-age=31536000",
+    "x-frame-options": "deny",
+    "expires": "Mon, 16 Nov 2020 19:10:21 GMT",
+    "accept-ranges": "bytes",
+    "source-age": "0",
+    "x-cache-hits": "0, 0",
+    "x-served-by": "cache-dca17758-DCA",
+    "x-cache": "MISS, MISS",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/functional/next/source/app/functions/toArray.ts"
+}

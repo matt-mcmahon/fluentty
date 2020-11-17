@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "x-served-by": "cache-dca17751-DCA",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "expires": "Mon, 16 Nov 2020 19:10:21 GMT",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "accept-ranges": "bytes",
+    "date": "Mon, 16 Nov 2020 19:05:21 GMT",
+    "x-cache": "MISS, MISS",
+    "x-cache-hits": "0, 0",
+    "x-xss-protection": "1; mode=block",
+    "access-control-allow-origin": "*",
+    "vary": "Authorization,Accept-Encoding",
+    "cache-control": "max-age=300",
+    "x-github-request-id": "3CE8:5821:33A19E:3B40CE:5FB2CD70",
+    "x-timer": "S1605553522.754833,VS0,VE90",
+    "x-fastly-request-id": "d43419c424a038cda56875145eaac898bead28c3",
+    "strict-transport-security": "max-age=31536000",
+    "content-type": "text/plain; charset=utf-8",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "deny",
+    "connection": "keep-alive",
+    "etag": "W/\"ddbde0f310954662b59ff8c275b8a8599fa37cc146a3f7b88169f94404c7b304\"",
+    "source-age": "0"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/functional/next/source/app/functions/blackbird.ts"
+}

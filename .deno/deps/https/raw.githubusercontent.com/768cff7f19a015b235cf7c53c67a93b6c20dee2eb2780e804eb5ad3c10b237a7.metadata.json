@@ -1,0 +1,27 @@
+{
+  "headers": {
+    "etag": "W/\"786d4de3181edd6a55635ec8c9efbb98f66dc433fa5115e8d1a47053efe4e0a1\"",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "accept-ranges": "bytes",
+    "content-type": "text/plain; charset=utf-8",
+    "strict-transport-security": "max-age=31536000",
+    "expires": "Mon, 16 Nov 2020 19:10:21 GMT",
+    "cache-control": "max-age=300",
+    "x-xss-protection": "1; mode=block",
+    "via": "1.1 varnish (Varnish/6.0), 1.1 varnish",
+    "source-age": "0",
+    "x-served-by": "cache-dca17747-DCA",
+    "x-content-type-options": "nosniff",
+    "x-cache-hits": "0, 0",
+    "x-github-request-id": "F656:2BC9:6D5546:7C5562:5FB2CD71",
+    "vary": "Authorization,Accept-Encoding",
+    "x-cache": "MISS, MISS",
+    "x-fastly-request-id": "bfcda210f191141af626061788be28ee7a7c0433",
+    "date": "Mon, 16 Nov 2020 19:05:21 GMT",
+    "connection": "keep-alive",
+    "x-timer": "S1605553522.766437,VS0,VE79",
+    "x-frame-options": "deny",
+    "access-control-allow-origin": "*"
+  },
+  "url": "https://raw.githubusercontent.com/matt-mcmahon/functional/next/source/app/functions/isNil.ts"
+}
