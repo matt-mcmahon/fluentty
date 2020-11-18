@@ -2,6 +2,11 @@ import { stdin, stdout } from "./io.ts";
 import { Match } from "./match.ts";
 import { Formatter, Prompt, Sanitizer, Validator } from "./prompt.ts";
 
+type PromiseThen<T> = Promise<T>["then"];
+type ThenCallback<T> = Parameters<PromiseThen<T>>;
+type ThenSuccessCallback<T> = ThenCallback<T>[0];
+type ThenFailureCallback<T> = ThenCallback<T>[1];
+
 /**
  * Initialize a new prompt, storing the given `message` and returning a
  * configuration object. You can chain methods to configure the prompt, for
@@ -89,6 +94,25 @@ export class Question {
    */
   sanitize = (...sanitizers: Sanitizer[]) =>
     this.map((prompt) => prompt.concat({ sanitizers }));
+
+  then = () => {
+    const then = (
+      question: Question,
+      thenCallback: ThenSuccessCallback<string>,
+    ) => {
+      let resolver;
+      let rejecter;
+      new Promise((resolve, reject) => {
+        resolver = resolve;
+        rejecter = reject;
+      });
+      return {
+        IO() {
+          question.IO().then(thenCallback);
+        },
+      };
+    };
+  };
 
   /**
    * Use a predicate to validate user input. If the validation function returns
